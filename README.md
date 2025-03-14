@@ -1,241 +1,167 @@
-*(This document is the result of a series of discussions, some online and
-some in person, held between Robert "Uncle Bob" Martin and John Ousterhout between
-September 2024 and February 2025. If you would like to comment on anything
-in this discussion, we recommend that you do so on the [Google group
-associated with APOSD](https://groups.google.com/g/software-design-book))*
+#### 본 문서는 John Ousterhout의 github에 정리된 글을 ChatGPT-4.5를 사용해 기계 번역한 문서입니다. [원본 Repository](https://github.com/johnousterhout/aposd-vs-clean-code)
+---
+_(이 문서는 Robert “Uncle Bob” Martin과 John Ousterhout가 2024년 9월부터 2025년 2월 사이에 온라인과 오프라인에서 진행한 여러 토론의 결과물입니다. 이 토론 내용에 대해 의견을 남기고 싶다면 [APOSD와 관련된 구글 그룹](https://groups.google.com/g/software-design-book)을 이용하시길 권장합니다.)_
 
-## Introductions
+## 소개
 
 **JOHN:**
 
-Hi (Uncle) Bob! You and I have each written books on software design.
-We agree on some things, but there are some pretty big differences of
-opinion between my recent book *A Philosophy of Software Design*
-(hereafter "APOSD") and your classic book *Clean Code*. Thanks for
-agreeing to discuss those differences here.
+안녕하세요, (Uncle) Bob! 당신과 저는 모두 소프트웨어 디자인에 관한 책을 집필했습니다.  
+어떤 부분에서는 의견이 일치하지만, 제 최근 저서 _A Philosophy of Software Design_ (이하 "APOSD")와 당신의 고전인 _Clean Code_ 사이에는 꽤 큰 의견 차이가 있습니다.  
+이 차이점들에 대해 이렇게 토론에 응해 주셔서 감사합니다.
 
 **UB:**
 
-My pleasure John.  Before we begin, let me say that I've carefully read through your book and I found it very enjoyable, and full of valuable insights.  There are some things I disagree with you on, such as TDD, and Abstraction-First incrementalism, but overall I enjoyed it a lot.
+천만에요, John. 시작하기 전에 말씀드리자면, 저는 당신의 책을 정독했고 매우 재미있게 읽었으며, 가치 있는 통찰들로 가득하다는 생각이 들었습니다. 물론 TDD나 ‘추상화 우선 증분 접근’과 같이 제가 동의하지 않는 몇 가지 주제도 있었지만, 전반적으로 매우 즐겁게 읽었습니다.
 
 **JOHN:**
 
-I'd like to discuss three topics with you: method length, comments,
-and test-driven development. But before getting into these,
-let's start by comparing overall philosophies. When you hear about a
-new idea related to software design, how do you decide whether or not
-to endorse that idea?
+저는 세 가지 주제에 대해 당신과 논의하고 싶습니다: 메서드 길이, 주석, 그리고 테스트 주도 개발(TDD)입니다. 그 전에 전반적인 철학부터 비교해 보죠. 소프트웨어 디자인과 관련된 새로운 아이디어를 들었을 때, 당신은 그 아이디어를 지지할지 말지를 어떻게 결정합니까?
 
-I'll go first. For me, the fundamental goal of software design is
-to make it easy to understand and modify the system. I use the term
-"complexity" to refer to things that make it hard to understand and
-modify a system. The most important contributors
-to complexity relate to information:
+먼저 제 생각을 말씀드리자면, 소프트웨어 디자인의 근본 목표는 시스템을 이해하고 수정하기 쉽게 만드는 것입니다. 저는 여기서 ‘복잡성’을 시스템을 이해하거나 수정하기 어렵게 만드는 요소들을 의미하는 용어로 사용합니다. 복잡성에 기여하는 가장 중요한 요소들은 정보와 관련되어 있습니다:
 
-* How much information must a developer have in their head in order to carry out a task?
-* How accessible and obvious is the information that the developer needs?
+-   개발자가 작업을 수행하기 위해 머릿속에 얼마나 많은 정보를 가지고 있어야 하는가?
+-   개발자가 필요한 정보를 얼마나 쉽게 접근하고 명확하게 인지할 수 있는가?
 
-The more information a developer needs to have, the harder it will be
-for them to work on the system. Things get even worse if the required
-information isn't obvious. The worst case is when there is a crucial
-piece of information hidden in some far-away piece of code
-that the developer has never heard of.
+개발자가 기억해야 할 정보가 많을수록 시스템을 다루기가 더 어려워집니다. 필요한 정보가 명확하지 않다면 상황은 더욱 악화됩니다. 가장 최악의 경우는 개발자가 한 번도 들어본 적 없는, 먼 곳에 숨겨진 중요한 정보가 있을 때입니다.
 
-When I'm evaluating an idea related to software design, I ask whether
-it will reduce complexity. This usually means either reducing the amount
-of information a developer has to know, or making the required information
-more obvious.
+저는 소프트웨어 디자인과 관련된 아이디어를 평가할 때, 그것이 복잡성을 줄여주는지 여부를 묻습니다. 이는 보통 개발자가 알아야 할 정보의 양을 줄이거나, 필요한 정보를 더 명확하게 만드는 것을 의미합니다.
 
-Now over to you: are there general principles that you use when deciding
-which ideas to endorse?
+이제 당신 차례입니다: 어떤 아이디어를 지지할지 결정할 때 적용하는 일반적인 원칙들이 있습니까?
 
 **UB:**
 
-I agree with your approach. A discipline or technique should make the job of programmers easier. I would add that the programmer we want to help most is not the author.  The programmer whose job we want to make easier is the programmer who must read and understand the code written by others (or by themself a week later).  Programmers spend far more hours reading code than writing code, so the activity we want to ease is that of reading.
+저도 당신의 접근 방식에 동의합니다. 어떤 기법이나 기술은 프로그래머의 작업을 더 쉽게 만들어야 합니다. 저는 여기서 도와주고자 하는 프로그래머는 코드 작성자가 아니라, 다른 사람이 작성한 코드를 읽고 이해해야 하는 프로그래머라고 덧붙이고 싶습니다.  
+프로그래머들은 코드를 작성하는 시간보다 읽는 시간이 훨씬 많기 때문에, 우리가 쉽게 만들어야 하는 활동은 바로 “읽기”입니다.
 
-## Method Length
+---
+
+## 메서드 길이
 
 **JOHN:**
 
-Our first area of disagreement is method length.
-On page 34 of *Clean Code* you say "The first rule of functions is that
-they should be small. The second rule of functions is that
-*they should be smaller than that*." Later on, you say "Functions
-should hardly ever be 20 lines long" and suggest that functions
-should be "just two, three, or four lines long". On page 35, you
-say "Blocks within `if` statements, `else` statements, `while` statements,
-and so on should be one line long. Probably that line should be a function
-call." I couldn't find anything in *Clean Code* to suggest that a function
-could ever be too short.
+우리의 첫 번째 의견 차이는 메서드 길이에 관한 것입니다.  
+*Clean Code*의 34페이지에서 당신은 “함수의 첫 번째 규칙은 작아야 한다. 함수의 두 번째 규칙은 _그보다 더 작아야 한다_”라고 말합니다. 이후에 “함수는 거의 20줄을 넘지 말아야 한다”며, 함수는 “두세 줄 또는 네 줄 정도가 좋다”라고 제안합니다. 35페이지에서는 “`if`문, `else`문, `while`문 등의 블록은 한 줄이어야 한다. 아마도 그 한 줄은 함수 호출이어야 한다”고 말합니다. 하지만 저는 *Clean Code*에서 함수가 너무 짧아질 수 있다는 언급은 전혀 찾을 수 없었습니다.
 
-I agree that dividing up code into relatively small units ("modular design")
-is one of the most important ways to reduce the amount of information a
-programmer has to keep in their mind at once. The idea, of course, is to take a
-complex chunk of functionality and encapsulate it in a separate method
-with a simple interface. Developers can then harness the functionality
-of the method (or read code that invokes the method) without learning
-the details of how the method is implemented; they only need to learn its
-interface. The best methods are those that provide a lot of functionality
-but have a very simple interface: they replace a large cognitive load
-(reading the detailed implementation) with a much smaller
-cognitive load (learning the interface). I call these methods "deep".
+저는 코드를 상대적으로 작은 단위로 나누는 “모듈화된 설계”가 개발자가 한 번에 기억해야 하는 정보의 양을 줄이는 가장 중요한 방법 중 하나라고 생각합니다. 당연히 그 아이디어는 복잡한 기능의 덩어리를 단순한 인터페이스를 가진 별도의 메서드로 캡슐화하자는 것입니다. 개발자는 메서드의 기능을 활용하거나 그 메서드를 호출하는 코드를 읽을 때, 메서드의 내부 구현 세부사항을 배우지 않고도 인터페이스만 이해하면 됩니다. 가장 좋은 메서드는 많은 기능을 제공하면서도 인터페이스는 매우 단순한 경우입니다. 이렇게 하면 큰 인지 부하(구현 세부사항을 읽는 것)를 훨씬 작은 인지 부하(인터페이스를 배우는 것)로 대체할 수 있습니다. 저는 이런 메서드를 “깊다(deep)”고 부릅니다.
 
-However, like most ideas in software design, decomposition can be taken too far.
-As methods get smaller and smaller there is less and less
-benefit to further subdivision.
-The amount of functionality hidden behind each interface
-drops, while the interfaces often become more complex.
-I call these interfaces "shallow": they don't help much in terms of
-reducing what the programmer needs to know. Eventually, the point is
-reached where someone using the method needs
-to understand every aspect of its implementation. Such methods
-are usually pointless.
+하지만 소프트웨어 디자인의 대부분의 아이디어와 마찬가지로, 분해는 지나치게 하면 역효과를 낼 수 있습니다. 메서드가 점점 더 작아질수록 추가 분해의 이점은 점점 줄어듭니다.  
+각 인터페이스 뒤에 숨겨진 기능의 양은 줄어들고, 인터페이스 자체는 종종 더 복잡해집니다.  
+저는 이런 인터페이스를 “얕다(shallow)”고 부르는데, 이는 개발자가 기억해야 할 정보를 줄여주는 데 크게 도움이 되지 않음을 의미합니다. 결국, 누군가가 그 메서드를 사용할 때 그 내부 구현의 모든 세부 사항을 이해해야 하는 지경에 이르면, 그러한 메서드는 보통 의미가 없게 됩니다.
 
-Another problem with decomposing too far is that it tends to
-result in *entanglement*. Two methods
-are entangled (or "conjoined" in APOSD terminology) if, in order to
-understand how one of them works internally, you also need to read the
-code of the other. If you've ever found yourself flipping back and forth
-between the implementations of two methods as you read code, that's a
-red flag that the methods might be entangled. Entangled methods
-are hard to read because the information you need to have in your head
-at once isn't all in the same place. Entangled methods can usually
-be improved by combining them so that all the code is in one place.
+너무 지나치게 분해하면 또 다른 문제, 즉 *얽힘(entanglement)*이 발생합니다. 두 메서드가 얽혀있다는 것은, 한 메서드의 내부 동작을 이해하기 위해 다른 메서드의 코드를 함께 읽어야 한다는 것을 의미합니다. 코드를 읽다가 두 메서드의 구현 사이를 계속 왔다 갔다 한다면, 그것은 해당 메서드들이 얽혀있다는 신호일 수 있습니다. 얽힌 메서드들은 한 번에 머릿속에 들어야 할 정보가 한 곳에 모여 있지 않기 때문에 읽기 어렵습니다. 보통 얽힌 메서드들은 하나로 합쳐서 모든 코드를 한 곳에 모으면 개선할 수 있습니다.
 
-The advice in *Clean Code* on method length is so extreme that it encourages
-programmers to create teeny-tiny methods that suffer from both shallow
-interfaces and entanglement.  Setting arbitrary numerical limits such
-as 2-4 lines in a method and a single line in the body of an
-`if` or `while` statement exacerbates this problem.
+*Clean Code*에서 제시한 메서드 길이에 관한 조언은 너무 극단적이어서, 프로그래머들로 하여금 얕은 인터페이스와 얽힘 문제를 가진 지나치게 작은 메서드를 만들도록 부추깁니다. 2~4줄이라는 임의의 숫자 제한이나 `if` 혹은 `while` 문 본문의 한 줄 제한 같은 것들은 이 문제를 악화시킵니다.
 
 **UB:**
 
-While I do strongly recommend very short functions, I don't think it's fair to say that the book sets arbitrary numerical limits. The 2-4 line functions that you referred to on page 34 were part of the _Sparkle_ applet that Kent Beck and I wrote together in 1999 as an exercise for learning TDD. I thought it was remarkable that most of the functions in that applet were 2-4 lines long because it was a Swing program; and Swing programs tend to have very long methods.
+저는 매우 짧은 함수를 강력히 추천하지만, 책에서 임의의 숫자 제한을 두고 있다고 보는 것은 옳지 않다고 생각합니다. 34페이지에서 언급한 2~4줄 함수들은 Kent Beck과 제가 1999년에 TDD 학습을 위해 함께 작성한 _Sparkle_ 애플릿의 일부였습니다. 그 애플릿의 함수들이 대부분 2~4줄 정도였던 것이 인상적이었는데, Swing 프로그램은 보통 매우 긴 메서드를 갖기 때문입니다.
 
-As for setting limits, on page 13 I make clear that although the recommendations in the book have worked well for me and the other authors, they might not work for everyone.  I claimed no final authority, nor even any absolute "rightness". They are offered for consideration.
+제한에 관해서는, 13페이지에서 책의 권고 사항이 저와 다른 저자들에게 잘 맞았지만 모든 사람에게 통하지 않을 수 있음을 분명히 했습니다. 저는 최종적인 권위나 절대적인 “정답”을 주장하지 않습니다. 단지 고려해볼 만한 제안으로 제시했을 뿐입니다.
 
 **JOHN:**
 
-I think these problems will be easiest to understand if we look at
-specific code examples. But before we do that, let me ask you, Bob:
-do you believe that it's possible for code to be over-decomposed, or
-is smaller always better? And, if you believe that over-decomposition
-is possible, how do you recognize when it has occurred?
+이 문제는 구체적인 코드 예제를 보면 이해하기가 가장 쉽습니다. 하지만 그 전에, Bob, 당신은 코드가 과도하게 분해될 수 있다고 생각합니까, 아니면 “더 작으면 항상 좋다”고 생각합니까? 그리고 만약 과도한 분해가 가능하다고 생각한다면, 그 시점을 어떻게 인지합니까?
 
 **UB:**
 
-It is certainly possible to over-decompose code.  Here's an example:
+코드가 과도하게 분해될 수 있는 것은 확실합니다. 예를 들어 보겠습니다:
 
 ```java
-void doSomething() {doTheThing()} // over-decomposed.
+void doSomething() { doTheThing(); } // 과도하게 분해된 경우.
 ```
 
-The strategy that I use for deciding how far to take decomposition is the old rule that a method should do "*One Thing*".  If I can *meaningfully* extract one method from another, then the original method did more than one thing.  "Meaningfully" means that the extracted functionality can be given a descriptive name; and that it does less than the original method.
+저는 분해를 어느 정도까지 진행할지 결정할 때 “한 가지 일만 해야 한다(One Thing)”라는 오래된 규칙을 사용합니다. 만약 제가 한 메서드에서 의미 있게 다른 하나의 메서드를 추출할 수 있다면, 원래의 메서드는 한 가지 이상의 일을 하고 있는 것입니다. 여기서 “의미 있게”라는 것은 추출된 기능에 설명적인 이름을 붙일 수 있으며, 원래 메서드보다 더 적은 일을 수행한다는 것을 의미합니다.
 
 **JOHN:**
 
-Unfortunately the One Thing approach will lead to over-decomposition:
+불행히도 “한 가지 일” 규칙은 과도한 분해로 이어질 것입니다:
 
- 1. The term "one thing" is vague and easy to abuse. For example, if a method has two lines of code, isn't it doing two things?
+1.  “한 가지 일”이라는 용어는 모호하고 남용하기 쉽습니다. 예를 들어, 메서드에 두 줄의 코드가 있다면 그것이 두 가지 일을 하고 있지 않겠습니까?
 
- 2. You haven't provided any useful guardrails to prevent over-decomposition. The example you gave is too extreme to be useful, and the "can it be named" qualification doesn't help: anything can be named.
+2.  분해의 남용을 막기 위한 유용한 가이드라인이 전혀 제공되지 않습니다. 당신이 제시한 예제는 너무 극단적이어서 실용적이지 않으며, “이름을 붙일 수 있는가?”라는 기준은 아무거나 이름을 붙일 수 있기 때문에 도움이 되지 않습니다.
 
- 3. The One Thing approach is simply wrong in many cases. If two things are closely related, it might well make sense to implement them in a single method. For example, any thread-safe method will first have to acquire a lock, then carry out its function. These are two "things", but they belong in the same method.
+3.  많은 경우에 “한 가지 일” 규칙은 단순히 잘못된 경우가 있습니다. 만약 두 가지가 밀접하게 관련되어 있다면, 하나의 메서드에 구현하는 것이 타당할 수 있습니다. 예를 들어, 어떤 스레드 안전(thread-safe) 메서드는 먼저 락(lock)을 획득한 후 기능을 수행해야 합니다. 이 두 가지는 “두 가지 일”이지만, 한 메서드에 함께 있어야 합니다.
 
 **UB:**
 
-Let me tackle the last thing first.  You suggested that locking the thread, and performing a critical section should be together in the same method.  However, I would be tempted to separate the locking from the critical section.
+먼저 마지막 점부터 이야기해 보죠. 당신은 스레드를 락(lock)하고 임계 구역(critical section)을 수행하는 것이 같은 메서드에 있어야 한다고 제안했습니다. 그러나 저는 락과 임계 구역을 분리하는 쪽으로 기울 것입니다.
 
 ```java
 void concurrentOperation() {
-    lock()
+    lock();
     criticalSection();
-    unlock()
+    unlock();
 }
 ```
 
-This decouples the critical section from the lock and allows it to be called at times when locking isn't necessary (e.g. in single thread mode) or when a lock has already been set by someone else.
+이렇게 하면 임계 구역과 락이 분리되어, 락이 필요 없는 경우(예: 단일 스레드 모드)나 이미 다른 곳에서 락이 설정된 경우에 임계 구역을 호출할 수 있습니다.
 
-Now, on to the "ease of abuse" argument.  I don't consider that to be a significant concern. `If` statements are easy to abuse.  `Switch` statements are easy to abuse.  Assignment statements are easy to abuse.  The fact that something is easy to abuse does not mean that it should be avoided or suppressed.  It simply means people should take appropriate care. There will always be this thing called: _judgment_.
+이제 “남용하기 쉽다”는 주장으로 넘어가겠습니다. 저는 이것이 심각한 문제라고 생각하지 않습니다. `if` 문은 남용하기 쉽고, `switch` 문, 할당문도 남용하기 쉽습니다. 무언가 남용하기 쉽다고 해서 그것을 피하거나 억제해야 한다는 의미는 아닙니다. 단지 사람들이 적절한 주의를 기울여야 한다는 뜻입니다. 항상 ‘판단’이라는 것이 존재할 것입니다.
 
-So when faced with this snippet of code in a larger method:
+예를 들어, 아래와 같은 코드 스니펫을 보겠습니다:
 
 ```java
 ...
-amountOwed=0;
-totalPoints=0;
+amountOwed = 0;
+totalPoints = 0;
 ...
 ```
 
-It would be poor judgement to extract them as follows, because the extraction is not meaningful.  The implementation is not more deeply detailed than the interface.
+이것을 다음과 같이 추출하는 것은 좋지 않은 판단일 것입니다. 왜냐하면 추출된 것이 의미 있는 분리라고 보기 어렵기 때문입니다. 구현이 인터페이스보다 더 상세하지 않습니다.
 
 ```java
 void clearAmountOwed() {
-    amountOwed=0;
+    amountOwed = 0;
 }
 
 void clearTotalPoints() {
-  totalPoints=0;
+    totalPoints = 0;
 }
 ```
 
-However, it may be good judgement to extract them as follows because the interface is abstract, and the implementation has deeper detail.
+하지만 아래와 같이 추출하는 것은 괜찮은 판단일 수 있습니다. 왜냐하면 인터페이스가 추상적이고, 구현이 더 깊은 세부사항을 담고 있기 때문입니다.
 
 ```java
 void clearTotals() {
-    amountOwed=0;
-    totalPoints=0;
+    amountOwed = 0;
+    totalPoints = 0;
 }
 ```
 
-The latter has a nice descriptive name that is abstract enough to be meaningful without being redundant.  And the two lines together are strongly related so as to qualify for doing _one thing_: initialization.
+후자의 경우, “clearTotals”라는 적절한 설명적 이름을 가지고 있어 중복되지 않으면서도 추상적입니다. 두 줄의 코드가 함께 “초기화(initialization)”라는 한 가지 일로 강하게 연관되어 있다고 볼 수 있습니다.
 
 **JOHN:**
 
-Of course anything can be abused. But the best approaches to design
-encourage people to do things the right way and discourage abuse.
-Unfortunately, the One Thing Rule encourages abuse for the reasons I
-gave above.
+물론 모든 것은 남용될 수 있습니다. 그러나 최선의 디자인 접근 방식은 올바른 방법을 하도록 유도하고 남용을 억제합니다.  
+문제는 “한 가지 일” 규칙이 위에서 말한 이유들 때문에 남용을 부추긴다는 점입니다.
 
-And of course software designers will need to use judgment: it isn't
-possible to provide precise recipes for software design.
-But good judgment requires principles and guidance. The
-*Clean Code* arguments about decomposition, including the One Thing
-Rule, are one-sided. They give strong, concrete, quantitative
-advice about when to chop things up, with virtually no guidance for
-how to tell you've gone too far. All I could find is a 2-sentence
-example on page 36 about Listing 3-3 (which is pretty trivial),
-buried in the middle of exhortations to "chop, chop, chop".
+그리고 소프트웨어 디자이너들은 판단력을 사용해야 합니다: 소프트웨어 디자인에 대해 정확한 레시피를 제공하는 것은 불가능합니다.  
+하지만 좋은 판단을 위해서는 원칙과 가이드라인이 필요합니다.  
+*Clean Code*에서 제시한 분해에 관한 논의, 특히 “한 가지 일” 규칙은 일방적입니다. 즉, 코드를 쪼개야 하는 시점을 구체적이고 정량적인 조언으로 제시하지만, 지나치게 분해되었을 때를 판단할 수 있는 가이드는 거의 없습니다. 제가 찾은 것은 Listing 3-3에 관한 36페이지의 2문장 예제뿐인데, 이는 “쪼개라, 쪼개라, 쪼개라”라는 권고 사이에 묻혀 있습니다.
 
-One of the reasons I use the deep/shallow characterization is that it
-captures both sides of the tradeoff; it will tell you when a decomposition
-is good and also when decomposition makes things worse.
+저는 “깊다/얕다”라는 분류를 사용하는데, 이는 분해가 좋을 때와 오히려 나쁠 때를 모두 포착하기 때문입니다.
 
 **UB:**
 
-You make a good point that I don't talk much, in the book, about how to make the judgement call.  Back in 2008 my concern was breaking the habit of the very large functions that were common in those early days of the web.  I have been more balanced in the 2d ed.
+당신 말씀대로, 제 책에서는 판단에 관해 많이 다루지 않은 점이 인정됩니다.  
+2008년 초창기 웹 개발 시절의 거대한 함수 습관을 깨기 위해 노력했던 당시의 우려가 있었지만, 2판에서는 좀 더 균형 잡힌 접근을 하고 있습니다.
 
-Still, if I must err, I'd rather err on the side of decomposition.  There is value in considering, and visualizing decompositions.  They can always be inlined if we judge them to have gone too far.
+그래도 제가 실수하더라도 분해 쪽으로 조금 더 치우치는 편이 낫습니다.  
+분해를 고려하고 시각화하는 데는 가치가 있습니다.  
+나중에 인라인(inline) 처리하여 분해가 과도했다는 판단이 나오면 언제든지 다시 합칠 수 있습니다.
 
 **JOHN:**
 
-Coming back to your `clearTotals` example:
+이제 당신의 `clearTotals` 예제를 다시 보겠습니다:
 
-* The `clearTotals` method seems to contradict the One Thing Rule: the
-  variables `amountOwed` and `totalPoints` don't seem particularly related, so
-  initializing them both is doing two things, no? You say that both
-  statements are performing initialization, which makes it just one thing
-  (initialization). Does that mean it would also be okay to have a single
-  method that initializes two completely independent objects with nothing in
-  common? I suspect not. It feels like you are struggling to create a clean
-  framework for applying the One Thing Rule; that makes me think it isn't
-  a good rule.
-* Without seeing more context I'm skeptical that the `clearTotals`
-  method makes sense.
+-   `clearTotals` 메서드는 “한 가지 일” 규칙에 모순되는 것처럼 보입니다. 왜냐하면 `amountOwed`와 `totalPoints`는 특별히 관련되어 보이지 않으므로 둘 다 초기화하는 것은 두 가지 일을 하는 것 아닌가요? 당신은 두 문장이 모두 초기화를 수행한다고 보기에 한 가지 일이라고 주장합니다. 그렇다면 전혀 관련 없는 두 객체를 초기화하는 하나의 메서드도 괜찮다는 뜻인가요? 저는 그렇지 않다고 생각합니다. 당신은 “한 가지 일” 규칙을 적용하기 위한 깔끔한 체계를 만들려고 애쓰는 것처럼 보입니다; 이는 그 규칙이 좋은 규칙이 아니라는 생각을 들게 합니다.
+
+-   더 많은 문맥이 주어지지 않은 상황에서는 `clearTotals` 메서드가 타당한지 회의적입니다.
 
 **UB:**
 
-I hope you agree that between these two examples, the former is a bit better.
+저는 두 예제 중 전자가 약간 더 나은 것이라는 데 동의하기를 바랍니다.
 
 ```java
 public String makeStatement() {
@@ -248,27 +174,25 @@ public String makeStatement() {
 
 ```java
 public String makeStatement() {
-    amountOwed=0;
-    totalPoints=0;
+    amountOwed = 0;
+    totalPoints = 0;
     return makeHeader() + makeRentalDetails() + makeFooter();
 }
 ```
 
 **JOHN:**
 
-Well, actually, no. The second example is completely clear and obvious:
-I don't see anything to be gained by splitting it up.
+사실, 후자의 예제가 완전히 명확합니다.  
+분리해서 얻을 수 있는 이득이 전혀 보이지 않습니다.
 
-**SPOCK (a.k.a UB):**
+**SPOCK (즉, UB):**
 
-Fascinating.
+흥미롭네요.
 
 **JOHN:**
 
-I think it will be easier to clarify our differences if we consider
-a nontrivial code example. Let's look at the `PrimeGenerator` class from
-*Clean Code*, which is Listing 10-8 on pages 145-146. This Java class
-generates the first N prime numbers:
+우리의 차이를 명확히 하기 위해, 이번에는 좀 더 복잡한 코드 예제를 보겠습니다.  
+*Clean Code*의 Listing 10-8, 즉 145-146페이지에 있는 `PrimeGenerator` 클래스를 살펴보죠. 이 Java 클래스는 처음 N개의 소수를 생성합니다:
 
 ```java
 package literatePrimes;
@@ -278,7 +202,7 @@ import java.util.ArrayList;
 public class PrimeGenerator {
     private static int[] primes;
     private static ArrayList<Integer> multiplesOfPrimeFactors;
-    
+
     protected static int[] generate(int n) {
         primes = new int[n];
         multiplesOfPrimeFactors = new ArrayList<Integer>();
@@ -286,12 +210,12 @@ public class PrimeGenerator {
         checkOddNumbersForSubsequentPrimes();
         return primes;
     }
-    
+
     private static void set2AsFirstPrime() {
         primes[0] = 2;
         multiplesOfPrimeFactors.add(2);
     }
-    
+
     private static void checkOddNumbersForSubsequentPrimes() {
         int primeIndex = 1;
         for (int candidate = 3; primeIndex < primes.length; candidate += 2) {
@@ -299,7 +223,7 @@ public class PrimeGenerator {
                 primes[primeIndex++] = candidate;
         }
     }
-    
+
     private static boolean isPrime(int candidate) {
         if (isLeastRelevantMultipleOfLargerPrimeFactor(candidate)) {
             multiplesOfPrimeFactors.add(candidate);
@@ -307,13 +231,13 @@ public class PrimeGenerator {
         }
         return isNotMultipleOfAnyPreviousPrimeFactor(candidate);
     }
-    
+
     private static boolean isLeastRelevantMultipleOfLargerPrimeFactor(int candidate) {
         int nextLargerPrimeFactor = primes[multiplesOfPrimeFactors.size()];
         int leastRelevantMultiple = nextLargerPrimeFactor * nextLargerPrimeFactor;
         return candidate == leastRelevantMultiple;
     }
-    
+
     private static boolean isNotMultipleOfAnyPreviousPrimeFactor(int candidate) {
         for (int n = 1; n < multiplesOfPrimeFactors.size(); n++) {
             if (isMultipleOfNthPrimeFactor(candidate, n))
@@ -321,11 +245,11 @@ public class PrimeGenerator {
         }
         return true;
     }
-    
+
     private static boolean isMultipleOfNthPrimeFactor(int candidate, int n) {
         return candidate == smallestOddNthMultipleNotLessThanCandidate(candidate, n);
     }
-    
+
     private static int smallestOddNthMultipleNotLessThanCandidate(int candidate, int n) {
         int multiple = multiplesOfPrimeFactors.get(n);
         while (multiple < candidate)
@@ -336,25 +260,24 @@ public class PrimeGenerator {
 }
 ```
 
-Before we dive into this code, I'd encourage everyone reading
-this article to take time to read over the code and draw your own conclusions
-about it. Did you find the code easy to understand? If so, why? If not, what
-makes it complex?
+토론을 시작하기 전에, 이 글을 읽는 모든 분들께 부탁드립니다.  
+이 코드를 읽으시고 스스로 결론을 내려보시길 바랍니다.  
+이 코드가 이해하기 쉽다고 느끼셨습니까? 그렇다면 그 이유는 무엇입니까?  
+만약 이해하기 어렵다면, 무엇이 복잡하게 만들었는지 설명해 주십시오.
 
-Also, Bob, can you confirm that you stand by this code (i.e. the code
-properly exemplifies the design philosophy of *Clean Code* and this
-is the way you believe the code should appear if it were used in
-production)?
+또한, Bob, 이 코드가 (즉, 코드가 프로덕션에 사용될 경우에) *Clean Code*의 디자인 철학을 올바르게 보여준다고 확신하는지 확인해 주실 수 있습니까?
 
 **UB:**
 
-Ah, yes.  The `PrimeGenerator`.  This code comes from the 1982 paper on [*Literate Programming*](https://www.cs.tufts.edu/~nr/cs257/archive/literate-programming/01-knuth-lp.pdf) written by Donald Knuth.  The program was originally written in Pascal, and was automatically generated by Knuth's WEB system into a single very large method which I translated into Java.
+아, 네. `PrimeGenerator` 말씀이시군요. 이 코드는 Donald Knuth가 작성한 [_Literate Programming_](https://www.cs.tufts.edu/~nr/cs257/archive/literate-programming/01-knuth-lp.pdf) 1982년 논문에서 유래한 코드입니다.  
+이 프로그램은 원래 Pascal로 작성되었고, Knuth의 WEB 시스템에 의해 자동으로 하나의 매우 긴 메서드로 생성되었으며, 제가 이를 Java로 번역했습니다.
 
-Of course this code was never meant for production.  Both Knuth and I used it as a pedagogical example.  In *Clean Code* it appears in a chapter named *Classes*.  The lesson of the chapter is that a very large method will often contain many different sections of code that are better decomposed into independent classes.
+물론 이 코드는 프로덕션용으로 의도된 것은 아닙니다. Knuth와 저는 이 코드를 교육적 예제로 사용했습니다.  
+*Clean Code*에서는 이 코드가 *클래스*라는 챕터에 등장합니다. 이 챕터의 교훈은, 너무 큰 메서드에는 종종 하나의 책임 원칙(Single Responsibility Principle)을 위반하는 여러 코드 부분이 포함되어 있으므로, 이를 몇 개의 잘 분리된 클래스들로 분해하는 것이 좋다는 것입니다.
 
-In the chapter I extracted three classes from that function: `PrimePrinter`, `RowColumnPagePrinter` and `PrimeGenerator`.
+그 챕터에서 저는 그 함수에서 `PrimePrinter`, `RowColumnPagePrinter`와 `PrimeGenerator` 세 개의 클래스를 추출했습니다.
 
-One of those extracted classes was the `PrimeGenerator`. It had the following code (which I did not publish in the book.)  The variable names and the overall structure are Knuth's.
+추출한 클래스 중 하나가 `PrimeGenerator`입니다. 제가 이 코드를 책에 게재하지 않았습니다만, 변수 이름과 전체 구조는 Knuth의 것입니다.
 
 ```java
 public class PrimeGenerator {
@@ -371,7 +294,7 @@ public class PrimeGenerator {
             if (j == square) {
 	            mult.add(j);
             } else {
-                jprime=true;
+                jprime = true;
                 for (int mi = 1; mi < ord; mi++) {
                     int m = mult.get(mi);
                     while (m < j)
@@ -391,108 +314,57 @@ public class PrimeGenerator {
 }
 ```
 
-Even though I was done with the lesson of the chapter, I didn't want to leave that method looking so outdated.  So I cleaned it up a bit as an afterthought.  My goal was not to describe how to generate prime numbers.  I wanted my readers to see how large methods, that violate the Single Responsibility Principle, can be broken down into a few smaller well-named classes containing a few smaller well-named methods.
+제가 그 챕터의 교훈을 다 전달한 후에도, 그 메서드가 너무 구식으로 보이지 않도록 하기 위해 약간 정리한 것이 있습니다.  
+저의 목표는 소수를 생성하는 방법을 설명하는 것이 아니라,  
+단일 책임 원칙을 위반하는 거대한 메서드를 몇 개의 잘 이름 붙여진 작은 클래스와 그 안의 작은 메서드들로 분해할 수 있다는 것을 독자들이 보도록 하는 것이었습니다.
 
 **JOHN:**
 
-Thanks for the background. Even though the details of that code weren't
-the main point of the chapter, presumably the code represents what you think
-is the "right" and "cleanest" way to do things, given the algorithm at hand.
-And that's where I disagree.
+배경 설명 감사합니다. 비록 그 코드의 세부 사항이 챕터의 주된 포인트는 아니었지만,  
+아마도 그 코드는 주어진 알고리즘에 대해 당신이 “올바른” 또는 “가장 깔끔한” 방식이라고 생각하는 모습을 보여주는 것이라고 생각됩니다.  
+여기서 제가 동의하지 않는 부분은 여러 디자인 문제들이 있는데, 우선 메서드 길이에 집중해 보겠습니다.  
+코드가 너무 많이 쪼개져서(8개의 아주 작은 메서드) 읽기가 어렵습니다.  
+예를 들어, `isNotMultipleOfAnyPreviousPrimeFactor` 메서드를 보십시오.  
+이 메서드는 `isMultipleOfNthPrimeFactor`를 호출하고, 그 메서드는 다시  
+`smallestOddNthMultipleNotLessThanCandidate`를 호출합니다.  
+이들 메서드는 얕고 얽혀있어서, `isNot...`를 이해하기 위해서는  
+다른 두 메서드를 모두 읽고 그 코드를 머릿속에 올려야 합니다.  
+예를 들어, `isNot...`는 부수 효과(side effect)가 있습니다 (즉, `multiplesOfPrimeFactors`를 수정합니다)  
+하지만 이 부수 효과는 해당 세 메서드를 모두 읽어보기 전까지는 알 수 없습니다.
 
-There are many design problems with `PrimeGenerator`, but for now I'll
-focus on method length. The code is chopped up so much (8 teeny-tiny methods)
-that it's difficult to read. For starters, consider the
-`isNotMultipleOfAnyPreviousPrimeFactor` method. This method invokes
-`isMultipleOfNthPrimeFactor`, which invokes
-`smallestOddNthMultipleNotLessThanCandidate`. These methods are shallow
-and entangled:
-in order to understand
-`isNot...` you have to read the other two
-methods and load all of that code into your mind at once. For example,
-`isNot...` has side effects (it modifies `multiplesOfPrimeFactors`) but
-you can't see that unless you read all three methods.
+만약 어떤 독자가 이름만 보고 `isMultipleOfNthPrimeFactor`가 부수 효과 없는 불린 판별자라고 믿고  
+그 코드를 읽지 않는다면, `isNot...`가 후보(candidate) 인자에 대해  
+어떤 제약(호출 시마다 단조증가해야 한다는 제약)을 갖는지 알 수 없습니다.  
+이러한 행동을 이해하려면, `isMultiple...`과 `smallestOdd...` 두 메서드를 모두 읽어야 합니다.
 
 **UB:**
 
-I think you have a point.  Eighteen years ago, when I was in the throes of this refactoring, the names and structure made perfect sense to me.  They make sense to me now, too -- but that's because I once again understand the algorithm.  When I returned to the algorithm for the first time a few days ago, I  struggled with the names and structure.  Once I understood the algorithm the names and structure made perfect sense.
+당신 말씀이 일리가 있습니다. 18년 전, 리팩토링에 열중했던 당시엔, 이름과 구조가 저에게 완벽하게 이해되었고 지금도 그렇습니다—  
+하지만 이는 제가 알고리즘을 다시 이해했기 때문입니다.  
+알고리즘을 다시 접했을 때, 저는 이름과 구조가 이해하기 어렵다는 문제를 겪었습니다.  
+일단 알고리즘을 이해하고 나면, 이름과 구조는 완벽하게 맞아떨어집니다.
 
 **JOHN:**
 
-Those names are problematic even for someone who understands the algorithm;
-we'll talk about them a bit later, when discussing comments. And, if code
-no longer makes sense to the writer when the writer returns to the code later,
-that means the code is problematic. The fact that code can eventually
-be understood (with great pain and suffering) does not excuse its entanglement.
+그런데 그 이름들은 알고리즘에 익숙한 사람에게도 문제가 됩니다;  
+후에 주석에 관해서도 이야기하겠지만,  
+만약 코드 작성자가 코드를 다시 볼 때 더 이상 이해가 되지 않는다면,  
+그 코드는 문제가 있다는 뜻입니다.  
+코드를 이해하는 데 많은 고통을 겪어야 한다고 해서  
+그것이 결국 이해될 수 있다는 점은 그 코드의 복잡함을 용서할 수 없습니다.
 
 **UB:**
 
-Would that we had such a crystal ball that we could help our future selves avoid such "_great pain and suffering_".  ;-)
+그 점은 유효한 우려입니다. 다만, 함수들이 호출 순서대로 배열되어 있기 때문에,  
+독자는 이미 메인 루프를 읽고, 후보(candidate)가 두 배씩 증가한다는 것을 이해할 수 있습니다.
 
-**JOHN:**
+그렇지만 `smallestOddNthMultipleNotLessThanCandidate`에 숨겨진 부수 효과는 다소 문제가 있습니다.  
+당신이 지적한 후, 저는 그 부수 효과가 별로 마음에 들지 않습니다.  
+하지만 그 부수 효과가 `isNot...`의 기본적인 이해를 혼란스럽게 하지는 않습니다.
 
-There is no need for a crystal ball. The problems with `PrimeGenerator` are
-pretty obvious, such as the entanglement and interface complexity; maybe you
-were surprised that it is hard to understand, but I am not. Said another
-way, if you are unable to predict whether your code will be easy to
-understand, there are problems with your design methodology.
-
-**UB:**
-
-Fair enough.  I will say, however, that I had equal "_pain and suffering_" interpreting your rewrite (below).  So, apparently, neither of our methodologies were sufficient to rescue our readers from such struggles.
-
-**JOHN:**
-
-Going back to my introductory remarks about complexity, splitting up
-`isNot...` into three methods doesn't reduce the amount of information
-you have to keep in your mind. It just spreads it out, so it isn't as
-obvious that you need to read all three methods together. And, it's harder
-to see the overall structure of the code because it's split up: readers have
-to flip back and forth between the methods, effectively reconstructing a
-monolithic version in their minds. Because the pieces are all related,
-this code will be easiest to understand if it's all together in one place.
-
-**UB:**
-
-I disagree.  Here is `isNotMultipleOfAnyPreviousPrimeFactor`.
-
-```java
-private static boolean isNotMultipleOfAnyPreviousPrimeFactor(int candidate) {
-    for (int n = 1; n < multiplesOfPrimeFactors.size(); n++) {
-        if (isMultipleOfNthPrimeFactor(candidate, n))
-            return false;
-    }
-    return true;
-}
-```
-
-If you trust the `isMultipleOfNthPrimeFactor` method, then this method stands alone quite nicely.  I mean we loop through all n previous primes and see if the candidate is a multiple.  That's pretty straight forward.
-
-Now it would be fair to ask the question how we determine whether the candidate is a multiple, and in that case you'd want to inspect the `isMultiple...` method.
-
-**JOHN:**
-
-This code does appear to be simple and obvious.
-Unfortunately, this appearance is deceiving.
-If a reader trusts the name `isMultipleOfNthPrimeFactor` (which suggests
-a predicate with no side effects) and doesn't bother to read its code, they
-will not realize that it has side effects, and that the side effects
-create a constraint on the `candidate` argument to `isNot...`
-(it must be monotonically non-decreasing from invocation
-to invocation). To understand these behaviors, you have to
-read both `isMultiple...` and `smallestOdd...`. The current decomposition
-hides this important information from the reader.
-
-If there is one thing more likely to result in bugs than not understanding code,
-it's thinking you understand it when you don't.
-
-**UB:**
-
-That's a valid concern.  However, it is tempered by the fact that the functions are presented in the order they are called.  Thus we can expect that the reader has already seen the main loop and understands that `candidate` increases by two each iteration.
-
-The side effect buried down in `smallestOddNth...` is a bit more problematic. Now that you've pointed it out I don't like it much.  Still, that side effect should not confound the basic understanding of `isNot...`.
-
-In general, if you trust the names of the methods being called then understanding the caller does not require understanding the callee.  For example:
+일반적으로, 호출되는 메서드의 이름을 신뢰한다면,  
+호출하는 메서드를 이해하기 위해 그 내부를 모두 읽을 필요는 없다고 생각합니다.  
+예를 들어:
 
 ```java
 for (Employee e : employees)
@@ -500,753 +372,684 @@ for (Employee e : employees)
         e.pay();
 ```
 
-This would not be made more understandable if we replaced those two method calls with their implementations.  Such a replacement would simply obscure the intent.
+이 경우, 두 메서드 호출의 내부를 전부 읽으면 오히려 의도가 더 흐려질 것입니다.  
+이와 같은 경우, 메서드를 분리하면 오히려 의도를 모호하게 만들 뿐입니다.
 
 **JOHN:**
 
-This example works because the called methods are relatively independent of
-the parent. Unfortunately that is not the case for `isNot...`.
+이 예제는 호출된 메서드들이 호출자와 상대적으로 독립적이기 때문에 잘 작동합니다.  
+불행히도 `isNot...`의 경우는 그렇지 않습니다.
 
-In fact, `isNot...` is not only entangled with the methods it calls, it's also
-entangled with its callers. `isNot...` only works if it is invoked in
-a loop where `candidate` increases monotonically. To convince yourself
-that it works, you have to find the code that invokes `isNot...` and
-make sure that `candidate` never decreases from one call to the next.
-Separating `isNot...` from the loop that invokes it makes it harder
-for readers to convince themselves that it works.
+실제로, `isNot...`는 자신을 호출하는 루프와 얽혀 있습니다.  
+`isNot...`는 후보(candidate)가 단조증가한다는 조건 하에서만 제대로 동작합니다.  
+이 코드가 동작함을 확신하려면,  
+`isNot...`가 호출되는 루프를 찾아, 후보(candidate)가 이전 호출에서 절대 감소하지 않았음을 확인해야 합니다.  
+이렇게 분리되면, 독자가 제대로 작동함을 스스로 확신하기 어려워집니다.
 
 **UB:**
 
-Which, as I said before, is why the methods are ordered the way they are.  I expect that by the time you get to `isNot...` you've already read `checkOddNumbersForSubsequentPrimes` and know that `candidate` increases by twos.
+제가 말씀드린 것처럼, 메서드들이 배열된 순서 덕분에,  
+`isNot...`에 도달하기 전에 이미 `checkOddNumbersForSubsequentPrimes`를 읽으면서  
+후보(candidate)가 2씩 증가한다는 사실을 알고 있을 것입니다.
 
 **JOHN:**
 
-Let's discuss this briefly, because it's another area where I
-disagree with *Clean Code*. If methods are entangled, there is no
-clever ordering of the method definitions that will fix the problem.
+이 부분에 대해 잠시 이야기해 보겠습니다. 이는 *Clean Code*에 대해 제가 동의하지 않는 또 다른 부분입니다.  
+만약 메서드들이 얽혀 있다면, 아무리 순서를 잘 배열한다고 해도 문제가 해결되지는 않습니다.
 
-In this particular situation two other methods intervene between the
-loop in `checkOdd...` and `isNot...`, so readers will have forgotten
-the loop context before they get to `isNot...`. Furthermore, the actual
-code that creates a dependency on the loop isn't in `isNot...`: it's in
-`smallestOdd...`, which is even farther away from `checkOdd...`.
+이 경우, `checkOdd...`와 `isNot...` 사이에 두 개의 메서드가 개입되므로,  
+독자는 루프의 문맥을 잊어버릴 수 있습니다.  
+더구나, 실제로 루프와의 의존 관계를 만드는 코드는 `isNot...` 내부에 있는 것이 아니라,  
+훨씬 떨어진 `smallestOdd...`에 있습니다.
 
 **UB:**
 
-I sincerely doubt anyone is going to forget that `candidate` is being increased by twos.  It's a pretty obvious way to avoid waste.
+후보(candidate)가 2씩 증가한다는 사실은 잊혀지지 않을 것이라 생각합니다.  
+이것은 낭비를 피하는 매우 명백한 방식입니다.
 
 **JOHN:**
 
-In my opening remarks I talked about how it's important to reduce the
-amount of information people have to keep in their minds at once.
-In this situation, readers have to remember that loop while they read
-four intervening methods that are mostly unrelated to the loop. You apparently think
-this will be easy and natural (I disagree). But it's even worse than
-that. There is no indication which parts of `checkOdd...` will be important
-later on, so the only safe approach is to remember *everything*, from *every*
-method, until you have encountered every other method that could possibly
-descend from it. And, to make the connection between the pieces, readers
-must also reconstruct the call graph to notice that, even through
-4 layers of method call, the code in `smallestOdd...` places constraints
-on the loop in `checkOdd...`. This is an unreasonable cognitive burden to
-place on readers.
+제 초기 발언에서, 사람들에게 한 번에 기억해야 하는 정보의 양을 줄이는 것이 중요하다고 말했습니다.  
+이 경우, 독자는 4단계에 걸친 여러 메서드를 읽으며 그 루프의 존재를 계속 기억해야 합니다.  
+심지어, 그 연결 고리를 찾기 위해 호출 그래프(call graph)를 재구성해야 합니다.  
+이로 인해 인지 부하가 과도해집니다.
 
-If two pieces of code are tightly related, the solution is to bring
-them together. Separating the pieces, even in physically adjacent methods,
-makes the code harder to understand.
+두 코드 조각이 밀접하게 관련되어 있다면, 해결책은 그것들을 한 곳에 모으는 것입니다.  
+물리적으로 인접한 메서드로 분리해 놓으면, 오히려 독자가 전체 구조를 이해하기 더 어려워집니다.
 
-To me, all of the methods in `PrimeGenerator` are entangled: in order to
-understand the class I had to load all of them into my mind
-at once. I was constantly flipping back and forth between the methods
-as I read the code. This is a red flag indicating
-that the code has been over-decomposed.
+제 생각에는, `PrimeGenerator`의 모든 메서드들이 서로 얽혀 있습니다:  
+이 클래스를 이해하기 위해 저는 모든 메서드를 한 번에 머릿속에 올려야 했습니다.  
+읽는 동안 계속 메서드 사이를 오가며 확인해야 했습니다.  
+이는 코드가 과도하게 분해되었다는 명백한 경고 신호입니다.
 
-Bob, can you help me understand why you divided the code into such
-tiny methods?
-Is there some benefit to having so many methods that I have missed?
+Bob, 왜 이렇게 작은 메서드들로 코드를 분할했는지 설명해 주실 수 있겠습니까?  
+혹시 제가 놓친 이점이 있을까요?
 
 **UB:**
 
-I think you and I are just going to disagree on this.  In general, I believe in the principle of small well-named methods and the separation of concerns. Generally speaking if you can break a large method into several well-named smaller methods with different concerns, and by doing so expose their interfaces, and the high level functional decomposition, then that's a good thing.
+저는 당신과 의견 차이가 날 것 같습니다.  
+일반적으로 저는 잘 이름 붙여진 작은 메서드와 관심사의 분리를 신봉합니다.  
+만약 하나의 거대한 메서드를 여러 개의 잘 이름 붙여진 작은 메서드들로 분할하여  
+각각의 관심사를 드러내고, 그 인터페이스를 노출시키면,  
+그것은 좋은 분해라고 생각합니다.
 
-* Looping over the odd numbers is one concern.
-* Determining primality is another.
-* Marking off the multiples of primes is yet another.
+-   홀수에 대해 반복하는 것은 한 관심사입니다.
+-   소수 판별은 또 다른 관심사입니다.
+-   소수의 배수를 표시하는 것은 또 다른 관심사입니다.
 
-It seems to me that separating and naming those concerns helps to expose the way the algorithm works -- even at the expense of some entanglement.
+이러한 관심사들을 분리하고 이름 붙이는 것이 알고리즘이 어떻게 작동하는지를 드러내는데 도움이 됩니다.  
+심지어 얽힘이 조금 발생하더라도 말이죠.
 
-In your solution, which we are soon to see below, you break the algorithm up in a similar way.  However, instead of separating the concerns into functions, you separate them into sections with comments above them.
+당신의 해결책, 즉 곧 보게 될 당신의 코드는 비슷한 방식으로 알고리즘을 분할합니다.  
+하지만 함수로 분리하는 대신, 주석으로 여러 구역으로 나눕니다.
 
-You mentioned that in my solution readers will have to keep the loop context in mind while reading the other functions.  I suggest that in your solution, readers will have to keep the loop context in mind while reading your explanatory comments.  They may have to "flip back and forth" between the sections in order to establish their understanding.
+당신은 제 솔루션에서는 독자가 루프의 문맥을 계속 기억해야 한다고 주장합니다.  
+반면, 제 솔루션에서는 독자가 주석을 보면서도 루프의 문맥을 기억해야 합니다.  
+어쩌면 주석 사이의 거리가 당신 것보다 더 멀 수도 있지만,  
+모두 한 화면에 들어올 정도이고, 그 이정표들은 꽤 명확합니다.
 
-Now perhaps you are concerned that in my solution the "flipping" is a longer distance (in lines) than in yours.  I'm not sure that's a significant point since they all fit on the same screen (at least they do on my screen) and the landmarks are pretty obvious.
-
-### Method Length Summary
+### 메서드 길이에 대한 요약
 
 **JOHN:**
 
-It sounds like it's time to wrap up this section. Is this a reasonable
-summary of where we agree and disagree?
+우리의 합의와 의견 차이를 요약해 보면 다음과 같습니다:
 
-* We agree that modular design is a good thing.
+-   우리는 모듈화된 설계가 좋다는 데 동의합니다.
 
-* We agree that it is possible to over-decompose, and that *Clean Code 1st ed.*
-  doesn't provide much guidance on how to recognize over-decomposition.
+-   과도한 분해가 가능하다는 데에도 동의하며, *Clean Code 1판*은 과도한 분해를 인지하는 방법에 대해 별다른 지침을 제공하지 않습니다.
 
-* We disagree on how far to decompose: you recommend decomposing
-  code into much smaller units than I do. You believe that
-  the additional decomposition you recommend makes code easier to
-  understand; I believe that it goes too far and actually makes code
-  more difficult to understand.
+-   우리는 분해의 정도에 대해 의견이 다릅니다: 당신은 제 방식보다 훨씬 작은 단위로 코드를 분할하는 것을 권장합니다.  
+    당신은 추가 분해가 코드를 이해하기 쉽게 만든다고 믿지만, 저는 오히려 그것이 코드를 더 이해하기 어렵게 만든다고 생각합니다.
 
-* You believe that the One Thing Rule, applied with judgment, will
-  lead to appropriate decompositions. I believe it lacks guardrails
-  and will lead to over-decomposition.
+-   당신은 “한 가지 일” 규칙을 적절히 적용하면 적절한 분해가 이루어진다고 믿습니다.  
+    저는 그 규칙이 가드레일(guardrails)이 부족해 과도한 분해로 이어질 것이라고 생각합니다.
 
-* We agree that the internal decomposition of `PrimeGenerator` into
-  methods is problematic. You point out that your main goal in writing
-  `PrimeGenerator` was to show how to decompose into classes, not
-  so much how to decompose a class internally into methods.
+-   우리는 `PrimeGenerator` 내부의 분해된 메서드들에 대해서도 의견이 다릅니다.  
+    당신은 제 주요 목적이 클래스 분해를 보여주기 위한 것이었으며,  
+    클래스 내부 메서드 분해에 대한 것이 아니었다고 설명합니다.
 
-* Entanglement between methods in a class doesn't bother you
-  as much as it bothers me. You believe that the benefits of decomposing
-  methods can compensate for problems caused by entanglement.
-  I believe they can't: when decomposed methods are entangled,
-  they are harder to read than if they were not decomposed, and this
-  defeats the whole purpose of decomposition.
+-   메서드들 간의 얽힘은 당신에게는 크게 문제가 되지 않지만,  
+    저는 얽힌 분해된 메서드들은 분해되지 않은 상태보다 읽기 어렵다고 봅니다.  
+    이는 분해의 본래 목적을 무색하게 만듭니다.
 
-* You believe that ordering the methods in a class can help to
-  compensate for entanglement between methods; I don't.
+-   당신은 클래스 내 메서드 순서를 잘 배열하면 얽힘 문제를 보완할 수 있다고 믿습니다;  
+    저는 그렇지 않다고 생각합니다.
 
 **UB:**
 
-I think this is a fair assessment of our agreements and disagreements.  We both value decomposition,
-and we both avoid entanglement; but we disagree on the relative weighting of those two values.
+이 정도면 우리의 동의점과 차이점을 공정하게 요약한 것 같습니다.  
+우리는 모두 분해의 가치를 인정하며 얽힘을 피하려 하지만,  
+그 두 가치의 상대적 중요성에서는 의견이 다릅니다.
 
-## Comments
+---
+
+## 주석
 
 **JOHN:**
 
-Let's move on to the second area of disagreement: comments. In my opinion,
-the *Clean Code* approach to commenting results in code with
-inadequate documentation, which increases the cost of software development.
-I'm sure you disagree, so let's discuss.
+두 번째 의견 차이 주제로 넘어가겠습니다: 주석에 관한 것입니다.  
+제 생각에는 *Clean Code*의 주석에 대한 접근 방식은,  
+소스 코드 문서화가 부족해져서 소프트웨어 개발 비용을 증가시킨다고 봅니다.  
+당신도 동의하지 않으리라 생각하는데, 이에 대해 논의해 봅시다.
 
-Here is what *Clean Code* says about comments (page 54):
+*Clean Code*에서는 주석에 대해 (54페이지) 다음과 같이 말합니다:
 
-> The proper use of comments is to compensate for our failure to express
-  ourselves in code. Note that I use the word failure. I meant it.
-  Comments are always failures. We must have them because we cannot always
-  figure out how to express ourselves without them, but their use is not
-  a cause for celebration... Every time you write a comment, you should
-  grimace and feel the failure of your ability of expression.
+> 주석의 올바른 사용은 우리가 코드로 우리의 의도를 표현하지 못한 실패를 보완하기 위한 것이다.  
+> “실패”라는 단어에 주목하라.  
+> 저는 그것을 의도했습니다.  
+> 주석은 언제나 실패이다. 우리는 때때로 표현할 방법을 찾지 못하기 때문에 주석이 필요하지만,  
+> 그것을 축하할 만한 이유로 보아서는 안 된다…  
+> 주석을 쓸 때마다, 당신은 자신의 표현 능력의 실패를 느끼며 찡그려야 한다.
 
-I have to be honest: I was horrified when I first read this text, and it
-still makes me cringe. This stigmatizes writing comments. Junior developers
-will think "if I write comments, people may think I've failed, so the
-safest thing is to write no comments."
+솔직히, 저는 이 글을 처음 읽었을 때 정말 경악했고 지금도 여전히 소름이 돋습니다.  
+이 글은 주석 작성을 낙인찍습니다.  
+초보 개발자들은 “주석을 쓰면 사람들이 내가 실패했다고 생각할지도 모른다”라고 생각하여,  
+가장 안전한 선택은 주석을 쓰지 않는 것이라고 여기게 될 것입니다.
 
 **UB:**
 
-That chapter begins with these words:
->*Nothing can be quite so helpful as a well placed comment.*
+해당 장은 다음과 같이 시작합니다:
 
-It goes on to say that comments are a *necessary* evil.
+> _잘 배치된 주석만큼 도움이 되는 것은 없다._
 
-The only way a reader could infer that they should write no comments is if they hadn't actually read the chapter.  The chapter walks through a series of comments, some bad, some good.
+이어서 좋은 주석과 나쁜 주석의 여러 사례를 보여줍니다.
 
 **JOHN:**
 
-*Clean Code* focuses a lot more on the "evil" aspects of comments than the
-"necessary" aspects. The sentence you quoted above is followed by two
-sentences criticizing comments. Chapter 4 spends 4 pages talking about good
-comments, followed by 15 pages talking about bad comments. There are snubs
-like "the only truly good comment is the comment you found a way
-not to write". And "Comments are always failures" is so catchy
-that it's the one thing readers are most likely to remember from the
-chapter.
+*Clean Code*는 주석의 “악한” 측면을  
+“필요한” 측면보다 훨씬 더 강조합니다.  
+당신이 인용한 문장은 좋은 주석에 대한 언급 없이,  
+나쁜 주석에 관한 15페이지 분량의 내용 뒤에 단 두 문장으로 끝납니다.  
+예를 들어 “유일하게 좋은 주석은 쓰지 않아도 되는 주석이다”와  
+“주석은 언제나 실패다”라는 표현은  
+독자들이 가장 기억하기 쉬운 내용이 됩니다.
 
 **UB:**
 
-The difference in page count is because there are just a few ways to write good comments, and so many more ways to write bad ones.
+페이지 수의 차이는 좋은 주석을 쓰는 경우가 극히 몇 가지이고,  
+나쁜 주석을 쓰는 경우가 훨씬 많기 때문입니다.
 
 **JOHN:**
 
-I disagree; this illustrates your bias against comments. If you look at
-Chapter 13 of APOSD, it finds a lot more
-constructive ways to use comments than *Clean Code*. And if you compare
-the tone of Chapter 13 of APOSD with Chapter 4 of *Clean Code*, the hostility
-of *Clean Code* towards comments becomes pretty clear.
+저는 동의하지 않습니다; 이것은 당신이 주석에 대해 편견을 갖고 있다는 것을 보여줍니다.  
+만약 APOSD의 13장을 보면,  
+*Clean Code*의 4장보다 훨씬 더 건설적인 주석 사용 방법이 많이 소개되어 있습니다.  
+그리고 13장과 4장의 톤을 비교해 보면,  
+*Clean Code*가 주석에 대해 얼마나 적대적인지 명확하게 드러납니다.
 
 **UB:**
 
-I'll leave you to balance that last comment with the initial statement, and the final example, in the _Comments_ chapter. They do not communicate "hostility".
+저는 마지막에 한 말씀 드리겠습니다.  
+저는 주석 자체에 적대적이지 않습니다.  
+저는 불필요한 주석에 대해 매우 적대적입니다.
 
-I'm not hostile to comments in general.  I _am_ very hostile to gratuitous comments.
+우리는 과거 어셈블리 언어 시절,  
+주석 없이 작성된 코드는 도저히 이해할 수 없었기에  
+주석이 필수적이었습니다.
 
-You and I likely both survived through a time when comments were absolutely necessary.  In the '70s and '80s I was an assembly language programmer.  I also wrote a bit of FORTRAN. Programs in those languages that had no comments were impenetrable.
+그 결과, 주석을 기본으로 쓰는 것이 관례가 되었고,  
+컴퓨터 과학 학생들은 주석을 비판 없이 쓰도록 교육받았습니다.  
+주석은 순수한 선함으로 여겨지게 되었습니다.
 
-As a result it became conventional wisdom to write comments by default.  And, indeed, computer science students were taught to write comments uncritically.  Comments became _pure good_.
-
-In _Clean Code_ I decided to fight that mindset.  Comments can be _really bad_ as well as good.
+*Clean Code*에서 저는 그 사고방식과 맞서 싸우고자 했습니다.  
+주석은 정말 나쁠 수도 있으며, 좋은 주석이 주는 이점보다 해로운 점이 많다고 봅니다.
 
 **JOHN:**
 
-I don't agree that comments are less necessary today than they were
-40 years ago.
+저는 오늘날 주석이 과거보다 덜 필요하다고 보지 않습니다.
 
-Comments are crucially important and add enormous value to software.
-The problem is that there is a lot of important information that simply
-cannot be expressed in code. By adding comments to fill in this missing
-information, developers can make code dramatically easier to read.
-This is not a "failure of their ability to express themselves", as you
-put it.
+주석은 매우 중요하며, 소프트웨어에 엄청난 가치를 더해줍니다.  
+문제는 코드만으로는 표현할 수 없는 중요한 정보들이 많다는 것입니다.  
+이런 누락된 정보를 주석을 통해 채움으로써,  
+개발자들은 코드를 훨씬 쉽게 읽을 수 있게 됩니다.  
+이것은 “표현 능력의 실패”라고 볼 수 없으며,  
+주석이 없으면 독자들이 더 많은 코드를 읽어야 하는 부담이 생깁니다.
 
 **UB:**
 
-It's very true that there is important information that is not, or cannot be, expressed in code.  That's a failure.  A failure of our languages, or of our ability to use them to express ourselves.  In every case a comment is a failure of our ability to use our languages to express our intent.
+사실, 코드로 의도를 온전히 표현하지 못하는 것은,  
+언어나 그 언어를 사용하는 우리의 능력의 한계 때문입니다.  
+모든 경우에 주석은 언어로 우리의 의도를 충분히 표현하지 못한 실패의 산물입니다.
 
-And we fail at that very frequently, and so comments are a necessary evil -- or, if you prefer, _an unfortunate necessity_.  If we had the perfect programming language (TM) we would never write another comment.
+그리고 우리는 그러한 실패를 너무 자주 겪습니다.  
+따라서 주석은 불행하지만 어쩔 수 없는 필수 요소입니다.  
+만약 우리가 완벽한 프로그래밍 언어(™)를 갖게 된다면,  
+더 이상 주석을 쓸 필요가 없을 것입니다.
 
 **JOHN:**
 
-I don't agree that a perfect programming language would
-eliminate the need for comments. Comments and code serve very different
-purposes, so it's not obvious to me that we should use the same
-language for both. In my experience, English works quite well
-as a language for comments.
-Why do you feel that information about a program should
-be expressed entirely in code, rather than using a combination of code
-and English?
+저는 주석이 코드와 완전히 동일한 정밀도를 가져야 한다고 생각하지 않습니다.  
+주석과 코드는 매우 다른 목적을 수행하며,  
+주석은 코드보다 덜 정밀해도 무방합니다.  
+주석은 보통 _왜_ 무언가가 수행되는지,  
+전반적인 아이디어를 담고 있습니다.  
+영어는 이와 같은 표현에 코드보다 훨씬 적합합니다.
 
 **UB:**
 
-I bemoan the fact that we must sometimes use a human language instead of a programming language.  Human languages are imprecise and full of ambiguities. Using a human language to describe something as precise as a program is very hard, and fraught with many opportunities for error and inadvertent misinformation.
+그 말에는 동의합니다.
 
 **JOHN:**
 
-I agree that English isn't always as precise as code, but it can still be
-used in precise ways and comments typically don't need the same
-degree of precision as code.
-Comments often contain qualitative information such
-as *why* something is being done, or the overall idea of something.
-English works better for these than code because it is a more
-expressive language.
+당신은 주석이 부정확하거나 오해를 불러일으킬 수 있어,  
+이로 인해 소프트웨어 개발 속도가 느려질까 걱정하는지요?  
+저는 주석이 오래되어 무용지물이 되는 경우를 종종 보지만,  
+그런 경우가 드물다고 생각합니다.  
+부정확한 주석은 가끔 발생하지만,  
+제가 겪은 바에 따르면 그것 때문에 많은 시간을 낭비한 적은 거의 없습니다.  
+반면, 불충분한 문서화 때문에 코드를 읽으며 시간을 낭비하는 경우는  
+전체 개발 시간의 50~80%에 달하기도 합니다.
 
 **UB:**
 
-I have no argument with that statement.
+저는 모든 주석을 잠재적 잘못된 정보로 보고 있습니다.  
+최선의 경우 주석은 작성자의 의도를 코드와 대조해 볼 수 있는 교차 확인 수단입니다.  
+주석에 신뢰를 부여하는 정도는, 그 주석이  
+얼마나 쉽게 검증할 수 있게 해주느냐에 달려 있습니다.  
+만약 어떤 주석이 검증을 쉽게 해준다면, 저는 그것을 매우 좋은 주석으로 봅니다.  
+반면, 명백하거나 잘못된 정보를 주는 주석은 시간만 낭비하게 만듭니다.
 
 **JOHN:**
 
-Are you concerned that comments will be incorrect or
-misleading and that this will slow down software development?
-I often hear people complain about stale comments (usually as an excuse
-for writing no comments at all) but
-I have not found them be a significant problem
-over my career. Incorrect comments do happen, but I don't encounter them
-very often and when I do, they rarely cost me much time. In contrast, I waste
-*enormous* amounts of time because of inadequate documentation; it's not
-unusual for me to spend 50-80% of my development time wading through
-code to figure out things that would be obvious if the code was properly
-commented.
+즉, 당신은 주석을 전혀 신뢰하지 않는다는 뜻인가요?  
+저는 대부분의 주석이 정확하다고 봅니다.  
+주석을 쓰는 것은 어렵지 않습니다; 제 소프트웨어 디자인 수업의 학생들은  
+몇 주 안에 주석을 잘 달기 시작합니다.  
+또한, 코드가 변경되어도 주석을 최신 상태로 유지하는 것은 어렵지 않습니다.  
+당신이 주석을 신뢰하지 않는 것은,  
+결과적으로 메서드를 호출할 때 그 메서드의 코드를 전부 읽어야 함을 의미합니다;  
+그 메서드가 다른 메서드를 호출한다면, 그 메서드들도, 또 그들이 호출하는 메서드들도  
+모두 읽어야 합니다. 이는 매우 많은 작업량입니다.
+
+만약 주석 없이 인터페이스가 정의된다면,  
+그 인터페이스가 어떻게 동작해야 하는지 명확하지 않습니다.  
+코드를 읽더라도, 어떤 부분은 변경되어서는 안 되고, 어떤 부분은 변경될 수 있는지  
+구분하기 어렵습니다(코드로 “계약(contract)”을 명시할 방법이 없습니다).  
+이로 인해 오해가 생기고 버그가 늘어날 것입니다.
 
 **UB:**
 
-You and I have had some very different experiences.
+글쎄요, 저는 모든 주석을 잠재적 잘못된 정보로 보지만,  
+주석이 있다면 읽기는 합니다;  
+하지만 주석을 묵시적으로 신뢰하지는 않습니다.  
+작성자가 주석을 남발하거나, 영어 실력이 부족한 경우에는  
+그 주석을 덜 신뢰하게 됩니다.
 
-I have certainly been helped by well-placed comments.  I have also, just as certainly, (and within this very document) been distracted and confused by a comment that was incorrect, misplaced, gratuitous, or otherwise just plain bad.
+저는 IDE에서 주석을 옅은 회색으로 칠해 쉽게 무시되는 것을  
+잘 알고 있습니다. 저는 제 IDE에서 주석을 밝은 소방차 빨간색으로 표시하는데,  
+이는 제가 주석을 쓸 때 반드시 읽히기를 원하기 때문입니다.
+
+동일하게, 저는 주석 대신 긴 이름을 사용합니다.  
+긴 이름은 주석보다 무시되기 어렵기 때문입니다.
 
 **JOHN:**
 
-I invite everyone reading this article to ask yourself the following questions:
+저는 “너무 긴” 이름이 주석보다 “더 유지관리되기 쉽다”는 데 동의하지 않습니다.  
+그리고 IDE가 주석을 무시하도록 만든다는 주장도 동의하지 않습니다(이는 당신의 편견이 드러난 것입니다).  
+저의 현재 IDE(VSCode)는 주석에 대해 옅은 색상을 사용하지 않습니다.  
+이전의 NetBeans는 그랬지만, 그 색상 체계는 주석을 숨기지 않고  
+코드와 주석을 모두 읽기 쉽게 구분해 주었습니다.
 
-* How much does your software development speed suffer because of
-  incorrect comments?
-* How much does your software development speed suffer because of
-  missing comments?
+이제 주석 대 긴 메서드 이름의 문제를 넘어,  
+주석 자체에 대해 이야기해 봅시다.  
+저는 주석이 필요한 두 가지 주요 이유가 있다고 생각합니다.  
+첫 번째 이유는 추상화입니다.  
+간단히 말해, 주석 없이는 추상화나 모듈화를 가질 수 없기 때문입니다.
 
-For me the cost of missing comments is easily 10-100x the cost of incorrect
-comments. That is why I cringe when I see things in *Clean Code* that
-discourage people from writing comments.
-
-Let's consider the `PrimeGenerator` class. There is not a single comment
-in that code; does this seem appropriate to you?
+추상화는 좋은 소프트웨어 디자인의 가장 중요한 구성 요소 중 하나입니다.  
+저는 추상화를 “중요하지 않은 세부 사항은 생략하고 본질만을 확대하는 것”으로 정의합니다.  
+가장 명백한 추상화의 예는 메서드입니다.  
+메서드는 그 코드를 읽지 않고도 사용할 수 있어야 합니다.  
+우리가 이를 달성하는 방법은 메서드의 *인터페이스*를 설명하는 헤더 주석을 작성하는 것입니다.  
+만약 메서드가 잘 설계되었다면, 인터페이스는  
+메서드의 코드보다 훨씬 단순할 것입니다(구현 세부사항은 생략됨).  
+따라서 주석은 사람들이 머릿속에 기억해야 할 정보의 양을 줄여줍니다.
 
 **UB:**
 
-I think it was appropriate for the purpose for which I wrote it. It was an adjunct to the lesson that very large methods can be broken down into smaller classes containing smaller methods. Adding lots of explanatory comments would have detracted from that point.
+오래 전, 1995년 한 책에서 저는 추상화를 다음과 같이 정의했습니다:
 
-In general, however, the commenting style I used in Listing 4-8 is more appropriate.  That listing, at the very end of the *Comments* chapter, describes yet another `PrimeGenerator` with a slightly different algorithm, and a better set of comments.
+> _본질적인 것을 확대하고, 관련 없는 것을 제거하는 것._
+
+저는 추상화가 좋은 소프트웨어 디자인에 있어 중요하다는 데 전적으로 동의합니다.  
+또한 잘 배치된 주석은 독자가 사용하려는 추상화를 이해하는 데 도움을 줄 수 있습니다.  
+그러나 주석이 추상화를 이해하는 유일한, 혹은 가장 좋은 방법은 아니라고 생각합니다.  
+하지만 때로는 주석이 유일한 방법일 수 있습니다.
+
+예를 들어:
+
+```java
+addSongToLibrary(String title, String[] authors, int durationInSeconds);
+```
+
+이 선언은 저에게 아주 좋은 추상화처럼 보입니다.  
+그리고 주석을 달아서 개선할 여지는 없다고 생각됩니다.
 
 **JOHN:**
 
-I disagree that adding comments would have distracted from your point,
-and I think Listing 4-8 is also woefully undercommented.
-But let's not argue about either of those issues. Instead, let's discuss
-what comments the `PrimeGenerator` code *should* have if it were used in production.
-I will make some suggestions, and you can agree or disagree.
+우리의 추상화에 대한 정의는 매우 유사합니다; 이는 긍정적입니다.  
+하지만 `addSongToLibrary` 선언은 아직 좋은 추상화가 아닙니다.  
+왜냐하면 이를 사용하려면 다음과 같은 질문에 대한 답변이 필요하기 때문입니다:
 
-For starters, let's discuss your use of megasyllabic names like
-`isLeastRelevantMultipleOfLargerPrimeFactor`.  My understanding is that
-you advocate using names like this instead of using shorter names
-augmented with descriptive comments: you're effectively moving the
-comments into code. To me, this approach is problematic:
+-   작가(author) 문자열에 “LastName, FirstName”과 같은 특정 형식이 요구되는가?
+-   작가 배열은 알파벳 순으로 정렬되어야 하는가? 그렇지 않다면 순서가 중요한가?
+-   만약 동일한 제목을 가진 노래가 이미 존재하는데, 작가가 다르다면 어떻게 되는가? 새 노래로 대체되는가, 아니면 여러 노래를 저장하는가?
+-   라이브러리는 어떻게 저장되는가? (예: 전적으로 메모리 내에 존재하는가? 아니면 디스크에 저장되는가?)  
+    만약 이 정보들이 다른 곳(예: 전체 클래스 문서)에 문서화되어 있다면,  
+    여기서 반복할 필요는 없습니다.
 
-* Long names are awkward. Developers effectively have to retype
-  the documentation for a method every time they invoke it, and the long
-  names waste horizontal space and trigger line wraps in the code. The names are
-  also awkward to read: my mind wants to parse every syllable every time
-  I read it, which slows me down. Notice that both you and I resorted to
-  abbreviating names in this discussion: that's an indication that
-  the long names are awkward and unhelpful.
-* The names are hard to parse and don't convey information as effectively
-  as a comment.
-  When students read `PrimeGenerator` one of the first things they
-  complain about is the long names (students can't make sense of them).
-  For example, the name above is
-  vague and cryptic: what does "least relevant" mean, and what is a
-  "larger prime factor"? Even with a complete understanding of the code in
-  the method, it's hard for me to make sense of the name.  If this name
-  is going to eliminate the need for a comment, it needs to be even longer.
-
-In my opinion, the traditional approach of using shorter names with
-descriptive comments is more convenient and conveys the required information
-more effectively. What advantage is there in the approach you advocate?
+따라서 `addSongToLibrary`는 꽤 많은 주석이 필요합니다.  
+경우에 따라 메서드의 시그니처(이름과 타입, 인자, 반환값)만으로  
+사용 방법을 이해할 수 있는 경우도 있지만, 이는 매우 드뭅니다.  
+당신이 선호하는 라이브러리 패키지의 문서를 살펴보면,  
+메서드의 시그니처만으로 이해할 수 있는 경우가 몇 개 있겠습니까?
 
 **UB:**
 
-"_Megasyllabic_": Great word!
+네, 메서드의 시그니처가 불완전한 추상화라 주석이 필요한 경우가 있습니다.  
+특히 인터페이스가 공개 API의 일부이거나, 별도의 개발팀이 사용할 경우에는 더욱 그렇습니다.  
+단일 개발 팀 내에서는, 팀원들이 시스템 내부를 충분히 이해하고 있으므로  
+인터페이스에 대해 긴 설명이 필요 없을 때가 많습니다.
 
-I like my method names to be sentence fragments that fit nicely with keywords and assignment statements.  It makes the code a bit more natural to read.
+**JOHN:**
+
+한 번 직접 만나 토론 중에, 당신은 인터페이스 주석이  
+그 코드에 대해 함께 작업하는 팀원들이 전체 코드를 “머릿속에 올려놓을 수 있다”는  
+아이디어 때문에 필요 없다고 주장한 적이 있습니다.  
+이런 접근은 모든 코드를 머릿속에 올려두어야 하는 큰 인지 부하를  
+초래하며, 실제로 작동할 수 있다고 상상하기 어렵습니다.  
+제 경험상, 몇 주 전에 작성한 코드를 금방 잊어버리는데,  
+프로젝트가 커지면 개발자들이 모든 코드를 기억하는 것은 현실적이지 않습니다.  
+몇 분간 인터페이스를 문서화하는 것이,  
+코드를 다시 유도하고 버그를 줄이는 데 큰 도움이 됩니다.
+
+**UB:**
+
+저는 인터페이스 주석이, 비록 팀 내부에서 사용되더라도,  
+필요하다고 생각합니다.  
+하지만 팀원들이 시스템에 대해 충분히 익숙하다면,  
+잘 이름 붙여진 메서드와 인자만으로도 충분히 이해할 수 있다고 봅니다.
+
+**JOHN:**
+
+이제 `PrimeGenerator`의 `isMultipleOfNthPrimeFactor` 메서드를 살펴봅시다.  
+누군가 코드에서 `isNot...` 호출을 만나면,  
+그들은 `isMultiple...`이 어떻게 동작하는지 충분히 이해해야 합니다.  
+메서드 이름만으로는 그 인터페이스를 완전히 문서화할 수 없으므로,  
+헤더 주석이 없다면 독자는 `isMultiple`의 코드를 전부 읽어야 합니다.  
+이로 인해 독자는 머릿속에 더 많은 정보를 적재해야 하게 됩니다.
+
+제가 첫 번째 시도로 작성한 `isMultiple`의 헤더 주석은 다음과 같습니다:
+
+```java
+/**
+ * candidate가 primes[n]의 배수이면 true, 아니면 false를 반환한다.
+ * multiplesOfPrimeFactors[n]을 수정할 수 있다.
+ * @param candidate
+ *      소수 판별 대상 숫자; 이전에 이 메서드에 전달된 어떤 값보다도 크거나 같아야 한다.
+ * @param n
+ *      테스트할 소수를 선택한다; multiplesOfPrimeFactors.size()보다 작거나 같아야 한다.
+ */
+```
+
+이 주석에 대해 어떻게 생각하십니까?
+
+**UB:**
+
+저는 이 주석이 정확하다고 생각합니다.  
+만약 제가 이 주석을 보았다면 삭제하지 않았을 것입니다.  
+Javadoc 형식일 필요는 없다고 봅니다.  
+첫 번째 문장은 `isMultipleOfNthPrimeFactor`라는 이름과 중복되므로 삭제할 수도 있겠지만,  
+부수 효과에 대한 경고는 유용합니다.
+
+**JOHN:**
+
+첫 문장이 이름과 대부분 중복된다는 점은 동의합니다.  
+그래서 주석을 삭제하는 대신 메서드 이름을 단축할 수도 있겠지요.
+
+당신은 이전에 주석이 코드보다 정밀하지 않다고 불평했지만,  
+이 경우 주석은 더 정밀합니다 (메서드 이름에는 `primes[n]`과 같은 텍스트를 포함할 수 없으니까요).
+
+**UB:**
+
+그렇습니다. 때로는 정밀함은 주석으로 표현하는 것이 더 낫습니다.
+
+계속해서 당신이 제시한 주석에 대해 비판하자면:  
+`candidate`라는 이름은 “소수 판별 대상 숫자”와 동의어입니다.
+
+결국, 주석에 쓰인 모든 단어들은  
+제가 왜 그런 의도로 작성했는지를 이해할 때까지 제 머릿속에 남게 됩니다.  
+또한, 그것들이 정확한지 여부도 걱정해야 합니다.  
+그래서 결국 코드를 읽어 그 주석을 검증해야 합니다.
+
+**JOHN:**
+
+방금 들린 큰 소리는 제 턱이 바닥에 떨어지는 소리처럼 들렸습니다.  
+이 문제를 좀 더 자세히 이해하고 싶습니다:  
+실제로 당신은 얼마나 많은 주석을, 코드를 읽지 않고도  
+신뢰할 수 있다고 생각합니까?
+
+**UB:**
+
+저는 모든 주석을 잠재적인 잘못된 정보로 봅니다.  
+최선의 경우, 주석은 작성자의 의도를 코드와 비교할 수 있는  
+교차 확인 수단일 뿐입니다.  
+주석에 부여하는 신뢰도의 정도는,  
+그 주석이 얼마나 쉽게 검증할 수 있게 해주느냐에 달려 있습니다.  
+어떤 주석이 검증을 쉽게 해준다면, 저는 그것을 정말 좋은 주석으로 봅니다.  
+반면, 당연한 사실을 쓴 주석이나 잘못된 주석은 시간을 낭비하게 만듭니다.
+
+**JOHN:**
+
+즉, 당신은 주석을 0% 신뢰한다는 말씀이신가요?  
+그렇다면 어떻게 메서드의 인터페이스를 이해하기 위해  
+모든 코드를 읽으려 하겠습니까?  
+왜냐하면 제 생각에는 대부분의 주석은 정확하기 때문입니다.  
+주석 쓰는 일은 어렵지 않으며, 제 소프트웨어 디자인 수업의 학생들도  
+몇 주 만에 이를 잘 수행합니다.  
+또한, 코드가 변경되어도 주석을 최신 상태로 유지하는 것도  
+그리 어렵지 않습니다.  
+당신이 주석을 신뢰하지 않는 것은,  
+결과적으로 메서드 호출 시 그 메서드의 코드를 전부 읽어야 한다는 것을 의미합니다;  
+만약 그 메서드가 다른 메서드를 호출한다면, 그 모든 호출 대상들을  
+재귀적으로 읽어야 합니다. 이는 엄청난 작업량입니다.
+
+---
+
+이제 주석 사용에 대한 논의를 조금 더 구체적인 예제로 들어보겠습니다.  
+`PrimeGenerator` 코드에서 주석 없이 작성되었다면,  
+이 코드가 적절하다고 생각하십니까?
+
+**UB:**
+
+저는 이 코드가 제가 작성한 목적에는 적합하다고 생각합니다.  
+이 코드는 거대한 메서드를 작은 클래스들로 분리할 수 있다는 교훈의  
+부속 자료로 작성된 것입니다.  
+하지만 일반적으로, Listing 4-8에서 보듯이,  
+주석의 밀도가 높은 코드가 더 적절할 수도 있습니다.  
+해당 Listing은 _Comments_ 챕터의 마지막에 등장하는  
+약간 다른 알고리즘과 더 나은 주석 세트를 가진 `PrimeGenerator`를 보여줍니다.
+
+**JOHN:**
+
+저는 주석을 추가하는 것이 당신의 요점을 흐리게 만들 것이라 생각합니다.  
+저는 Listing 4-8도 주석이 너무 부족하다고 봅니다.  
+하지만 이 문제에 대해 더 이상 논쟁하지 않고,  
+실제 프로덕션에서 사용될 경우 `PrimeGenerator` 코드에  
+어떤 주석들이 필요할지에 대해 이야기해 봅시다.  
+제가 몇 가지 제안을 하면, 당신은 동의하거나 반대할 수 있습니다.
+
+우선, 당신은 `isLeastRelevantMultipleOfLargerPrimeFactor`와 같은  
+어마어마하게 긴 이름을 사용하는데,  
+이것은 짧은 이름과 설명적인 주석을 조합하는 대신,  
+주석을 코드 안으로 옮기는 효과를 가진다고 생각하시는 것으로 이해됩니다.  
+저는 이 접근 방식이 문제 있다고 봅니다:
+
+-   긴 이름은 다루기 불편합니다.  
+    개발자는 메서드를 호출할 때마다 그 메서드의 설명을 타이핑해야 하며,  
+    긴 이름은 가로 공간을 낭비하고 코드에서 줄 바꿈을 유발합니다.  
+    또한, 긴 이름은 읽기에 어색하여,  
+    읽을 때마다 모든 음절을 하나하나 해석하려고 하게 되어 속도가 느려집니다.  
+    양측 모두가 이름을 축약해서 사용한다는 사실은,  
+    긴 이름이 불편하고 도움이 되지 않는다는 증거입니다.
+-   이름은 해석하기 어렵고, 주석보다 정보를 효과적으로 전달하지 못합니다.  
+    예를 들어, 학생들이 `PrimeGenerator`를 읽을 때,  
+    가장 먼저 불평하는 것 중 하나가 바로 긴 이름들입니다(학생들은  
+    그 의미를 이해할 수 없습니다).  
+    예를 들어 위의 이름은 모호하고 암호적입니다:  
+    “least relevant(최소로 관련 있는)”이 무엇을 의미하는지,  
+    “larger prime factor(더 큰 소수 인수)”는 무엇인지를 설명하지 않습니다.  
+    만약 이 이름이 주석의 필요성을 제거하려 한다면,  
+    훨씬 더 긴 이름이 되어야 할 것입니다.
+
+제 생각에는, 짧은 이름에 설명적인 주석을 덧붙이는 전통적인 방식이  
+더 편리하며 필요한 정보를 효과적으로 전달한다고 봅니다.  
+짧은 이름 대신 긴 이름을 사용하는 장점이 무엇인가요?
+
+**UB:**
+
+“메가음절(megasyllabic)”이라는 단어, 참 좋은 표현입니다!
+
+저는 메서드 이름을 키워드나 할당문과 자연스럽게 어울리는 문장 조각처럼  
+사용하는 것을 좋아합니다. 이것은 코드를 좀 더 자연스럽게 읽히게 만듭니다.
 
 ```java
 if (isTooHot)
     cooler.turnOn();
 ```
 
-I also follow a simple rule about the length of names.  The larger the scope of a method, the shorter its name should be and vice versa -- the shorter the scope the longer the  name.  The private methods I extracted in this case live in very small scopes, and so have longish names.  Methods like this are typically called from only one place, so there is no burden on the programmer to remember a long name for another call.
+또한 저는 메서드의 범위(scope)가 클수록 이름은 짧아야 하고,  
+범위가 작을수록 이름은 길어야 한다는 간단한 규칙을 따릅니다.  
+이 경우 private 메서드들은 매우 작은 범위에 존재하므로,  
+긴 이름을 사용할 수 있습니다.  
+이런 메서드들은 보통 한 곳에서만 호출되므로,  
+개발자가 긴 이름을 기억하는 데 부담이 없습니다.
 
 **JOHN:**
 
-Names like `isTooHot` are totally fine by me.
-My concern is about names like `isLeastRelevantMultipleOfLargerPrimeFactor`.
+`isTooHot` 같은 이름은 제게 전혀 문제가 되지 않습니다.  
+제 걱정은 `isLeastRelevantMultipleOfLargerPrimeFactor`와 같은 이름에 관한 것입니다.
 
-It's interesting that as methods get smaller and narrower, you recommend
-longer names.
-What this says to me is that the interfaces for those functions are
-more complex, so it takes more words to describe them. This provides
-supporting evidence for
-my assertion a while back that the more you split up a method,
-the shallower the resulting methods will be.
+흥미로운 점은, 메서드가 작고 범위가 좁아질수록  
+당신은 더 긴 이름을 권장한다는 것입니다.  
+제게는 이것이 해당 함수의 인터페이스가 더 복잡하다는 신호처럼 보입니다.  
+이는 제가 앞서 주장한 “분해를 많이 하면 결과 메서드들이 얕아진다”는  
+주장의 근거가 됩니다.
 
 **UB:**
 
-It's not the functions that get smaller, it's the scope that gets smaller.  A private function has a smaller scope than the public function that calls it.  A function called by that private function has an even smaller scope.  As we descend in scope, we also descend in situational detail.  Describing such detail often requires a long name, or a long comment.  I prefer to use a name.
+함수 자체가 작아지는 것이 아니라,  
+함수가 사용하는 범위가 작아집니다.  
+private 함수는 그것을 호출하는 public 함수보다 범위가 작고,  
+그 내부에서 호출되는 함수는 더 작은 범위를 가집니다.  
+범위가 작아질수록 상황에 따른 세부 사항도 줄어듭니다.  
+그런 세부 사항을 설명하려면 종종 긴 이름이나 긴 주석이 필요합니다.  
+저는 주석 대신 이름을 사용하는 것을 선호합니다.
 
-As for long names being hard to parse, that's a matter of practice.  Code is full of things that take practice to get used to.
+JOHN:
+
+긴 이름이 읽기 어렵다는 점은 연습의 문제일 뿐입니다.  
+코드는 연습이 필요한 많은 요소들로 가득합니다.
+
+**UB:**
+
+그 점은 동의합니다. 하지만 연습이 필요한 것은 변명의 여지가 되지 않습니다.  
+만약 긴 이름에 익숙해지기 위해 많은 노력이 필요하다면,  
+그 이름이 소화하기 쉬워질 보상 효과가 있어야 합니다.  
+지금까지 그 보상 효과를 전혀 보지 못했습니다.  
+그리고 연습이 이름을 쉽게 만든다는 이유도 설득력이 없습니다.
+
+또한, 위의 주석은 “복잡성은 독자의 눈에 있다”는  
+제 기본 원칙 중 하나를 위반합니다.  
+만약 다른 사람이 복잡하다고 생각하는 코드를 작성했다면,  
+그 코드는 아마도 복잡한 것이 맞습니다 (독자가 완전히 무능하다고  
+생각하는 경우를 제외하고).  
+독자에게 “연습이 부족하다”라고 탓할 수는 없습니다.  
+저도 같은 원칙을 따를 것입니다.
+
+**UB:**
+
+좋습니다.  
+“최소로 관련 있는(leastRelevant)”의 의미는,  
+작성자와 독자 사이의 친밀감 차이와 관련이 있습니다.
 
 **JOHN:**
 
-I don't accept this. Code may be full of things that take practice to get used
-to, but that doesn't excuse it.
-Approaches that require more practice are worse than
-those that require less.
-If it's going to take a lot of work to get comfortable with the long names
-then there had better be some compensating benefit; so far I'm not seeing any.
-And I don't see any reason to believe that practice will make those names
-easier to digest.
-
-In addition, your comment above violates one of my fundamental rules, which
-is "complexity is in the eye of the reader". If you write code that someone
-else thinks is complicated, then you must accept that the code is probably
-complicated (unless you think the reader is completely incompetent). It
-is not OK to make excuses or suggest that it is really the reader's problem
-("you just don't have enough practice"). I'm going to have to live by this
-same rule a bit later in our discussion.
+여전히 제 질문에 답하지 않으셨습니다:  
+짧은 이름 대신 긴 이름을 사용하여 주석을 대체하는 것이 왜 더 나은가요?
 
 **UB:**
 
-Fair enough.  As for the meaning of "leastRelevant", that's a much larger problem that you and I will encounter shortly.  It has to do with the intimacy that the author has with the solution, and the reader's lack of that intimacy.
+제게는 단지 선호의 문제입니다.  
+저는 주석보다는 긴 이름을 선호합니다.  
+주석이 유지보수되거나 읽히는 것을 신뢰하지 않기 때문입니다.  
+IDE가 주석을 옅은 색으로 칠해 쉽게 무시되도록 만드는 것을  
+본 적이 있습니까?  
+만약 그렇다면, 주석보다 이름이 더 무시되기 어렵다는 점에서  
+긴 이름을 선호합니다.
+
+(참고로, 제 IDE에서는 주석을 밝은 소방차 빨간색으로 칠합니다.)
 
 **JOHN:**
 
-You still haven't answered my question: why is it better to use super-long names
-rather than shorter names augmented with descriptive comments?
+결국, 당신의 주장은 “주석 없이도 충분하다”는 것입니다.  
+하지만 저는 주석이 코드의 인터페이스와 추상화를  
+완전하게 정의하는 데 필요하다고 생각합니다.  
+주석이 없다면, 코드를 이해하기 위해 작성자의 의도를  
+모든 코드를 읽어야 하므로, 오히려 버그와 혼란이 발생할 것입니다.
 
-**UB:**
+---
 
-It's a matter of preference for me.  I prefer long names to comments.  I don't trust comments to be maintained, nor do I trust that they will be read.  Have you ever noticed that many IDEs paint comments in light grey so that they can be easily ignored?  It's harder to ignore a name than a comment.
+이제, 우리가 여러 버전의 코드를 작성하기 위해  
+필요한 지식—예를 들어, 소수의 첫 배수가 왜 그 소수의 제곱이어야 하는지—  
+를 축적해야 했던 상황을 고려해 봅시다.  
+불행히도, 모든 지식을 코드로 표현할 수는 없습니다.  
+우리는 독자들이 그 지식을 매번 재구성하지 않도록,  
+최선을 다해 주석에 그 지식을 전달할 전문적 책임이 있습니다.  
+비록 주석이 완벽하지 않더라도,  
+주석은 코드를 이해하기 쉽게 만드는 데 도움을 줍니다.
 
-(BTW, I have my IDE paint comments in bright fire-engine red)
+만약 실제 상황에서 이런 문제가 발생한다면,  
+저는 당신이나 다른 사람들과 협력하여 주석을 개선할 것입니다.  
+예를 들어, “제곱” 주석이 왜 당신에게 도움이 되지 않았는지  
+더 자세히 질문하고,  
+몇몇 다른 사람들에게 그 주석을 보여줘서 피드백을 받고  
+주석을 다시 작성하겠습니다.
 
-**JOHN:**
-
-I don't see why a monster name is more likely to be "maintained" than
-a comment, and I don't agree that IDEs encourage people to ignore
-comments (this is your bias coming out again). My current IDE (VSCode)
-doesn't use a lighter color for comments.
-My previous one (NetBeans) did, but the color scheme didn't hide the comments; it
-distinguished them from the code in a way that made both code and comments
-easier to read.
-
-Now that we've discussed the specific issue of comments vs. long method
-names, let's talk about comments in general. I think there are two major reasons
-why comments are needed. The first reason for comments is abstraction.
-Simply put, without comments there is no way to have abstraction or modularity.
-
-Abstraction is one of the most important components of good software design.
-I define an abstraction as "a simplified way of thinking about something
-that omits unimportant details." The most obvious example of an abstraction
-is a method. It should be possible to use a method without reading its code.
-The way we achieve this is by writing a header comment that describes
-the method's *interface* (all the information someone needs in order
-to invoke the method). If the method is well-designed, the interface will be
-much simpler than the code of the method (it omits implementation details),
-so the comments reduce the amount of information people must have in
-their heads.
-
-**UB:**
-
-Long ago, in a 1995 book, I defined abstraction as:
->*The amplification of the essential and the elimination of the irrelevant.*
-
-I certainly agree that abstraction is of importance to good software design.  I also agree that well-placed comments can enhance the ability of readers to understand the abstractions we are attempting to employ.  I disagree that comments are the _only_, or even the _best_, way to understand those abstractions.  But sometimes they are the only option.
-
-But consider:
+이제 제가 당신이 반대했던 두 가지 특정 주석에 대해 이야기해 보겠습니다.  
+첫 번째는 `multiples` 변수에 대한 주석입니다:
 
 ```java
-addSongToLibrary(String title, String[] authors, int durationInSeconds);
+// 후보(candidate)가 이전에 만난 소수의 배수인지(나눗셈 없이) 효율적으로 테스트하기 위해 사용된다.
+// 여기 각 항목은 해당 소수(primes)에 대응하는 소수의 배수를 담고 있다.
+// 항목들은 단조롭게 증가한다.
 ```
 
-This seems like a very nice abstraction to me, and I cannot imagine how a comment might improve it.
-
-**JOHN:**
-
-Our definitions of abstraction are very similar; that's good to see.
-However, the `addSongToLibrary` declaration is not (yet) a good abstraction
-because it omits information
-that is essential. In order to use `addSongToLibrary`, developers
-need answers to the following questions:
-
-* Is there any expected format for an author string, such as "LastName, FirstName"?
-* Are the authors expected to be in alphabetical order? If not, is the order
-  significant in some other way?
-* What happens if there is already a song in the library with the given title
-  but different authors? Is it replaced with the new one, or will the library
-  keep multiple songs with the same title?
-* How is the library stored (e.g. is it entirely in memory? saved on disk?)?
-  If this information is documented somewhere else, such as the
-  overall class documentation, then it need not be repeated here.
-
-Thus `addSongToLibrary` needs quite a few comments.
-Sometimes the signature of a method (names and types of the method, its
-arguments, and its return value) contains all the information
-needed to use it, but this is pretty rare. Just skim through the documentation
-for your favorite library package: in how many cases could you understand how
-to use a method with only its signature?
-
-**UB:**
-
-Yes, there are times when the signature of a method is an incomplete abstraction and a comment
-is required.  This is especially true when the interface is part of a public API, or an API intended
-for use by a separate team of developers.  Within a single development team, however, long descriptive
-comments on interfaces are often more of an impediment than a help.  The team has intimate knowledge of the
-internals of the system, and will generally be able to understand an interface simply from its
-signature.
-
-**JOHN:**
-
-In one of our in-person discussions you argued that interface comments
-are unnecessary because when a group of developers is working on a body
-of code they can collectively keep the entire code "loaded" in their
-minds, so comments are unnecessary: if you have a question, just ask the
-person who is familiar with that code. This creates a huge cognitive load
-to keep all that code mentally loaded, and it's hard for me to imagine
-that it would actually work. Maybe your memory is better than mine, but I
-find that I quickly forget code that I wrote just a few weeks ago. In
-a project of any size, I think your approach would result in developers
-spending large amounts of time reading code to re-derive the interfaces,
-and probably making mistakes along the way. Spending a few minutes to
-document the interfaces would save time, reduce cognitive load, and
-reduce bugs.
-
-**UB:**
-
-I think that certain interfaces need comments, even if they are private to the team.  But I think it is more often the case that the team is familiar enough with the system that well named methods and arguments are sufficient.
-
-**JOHN:**
-
-Let's consider a specific example from `PrimeGenerator`: the `isMultipleOfNthPrimeFactor`
-method. When someone reading the code encounters the call to `isMultiple...`
-in `isNot...` they need to understand enough about how `isMultiple...` works
-in order to see how it fits into the code of `isNot...`.
-The method name does not fully document the interface, so if there
-is no header comment then readers will have to read the code of `isMultiple`.
-This will force readers to load more information into their
-heads, which makes it harder to work in the code.
-
-Here is my first attempt at a header comment for `isMultiple`:
+당신은 이 주석에서 버그(첫 번째 항목은 홀수가 아님)를 지적했습니다!  
+그리고 대부분의 정보를 생략하고, 다음과 같이 대안 제시를 했습니다:
 
 ```java
-/**
- * Returns true if candidate is a multiple of primes[n], false otherwise.
- * May modify multiplesOfPrimeFactors[n].
- * @param candidate
- *      Number being tested for primality; must be at least as
- *      large as any value passed to this method in the past.
- * @param n
- *      Selects a prime number to test against; must be
- *      <= multiplesOfPrimeFactors.size().
- */
+// 해당 소수의 배수.
 ```
 
-What do you think of this?
+그러나 이 경우 너무 유용한 정보들이 생략됩니다.  
+예를 들어, 독자가 왜 나눗셈 없이 테스트하는지,  
+또 항목들이 절대 감소하지 않는다는 사실을 알아야 한다는 점을 설명해야 합니다.  
+저는 그 버그만 수정하여 모든 정보를 그대로 남기는 편이 낫다고 봅니다:
+
+```java
+// 후보(candidate)가 이전에 만난 소수의 배수인지(나눗셈 없이) 효율적으로 테스트하기 위해 사용된다.
+// 각 항목(첫 번째 항목은 사용되지 않음)은 해당 소수의 홀수 배수를 담고 있다.
+// 항목들은 단조롭게 증가한다.
+```
+
+두 번째 주석은 for 루프에 관한 것입니다:
+
+```java
+// 이 루프의 각 반복은 후보(candidate)를 한 가지 잠재적 소수 인자에 대해 테스트한다.
+// 첫 번째 인자(2)는 후보가 홀수이므로 건너뛴다.
+```
+
+당신은 이 주석이 코드가 실제로 소수 인자에 대해 테스트하지 않고,  
+소수의 배수에 대해 테스트한다고 지적했습니다.  
+제가 구현 주석을 작성할 때,  
+코드 자체를 재진술하는 것이 아니라 논리적인 기능을 설명하는 데 중점을 둔다고 생각합니다.  
+따라서 이 주석은 추상적 기능을 설명한다는 점에서 맞습니다.
+
+그러나 만약 주석이 독자에게 혼란을 준다면, 좋은 주석은 아닙니다.  
+따라서 저는 이 주석을 다음과 같이 다시 작성하겠습니다:
+
+```java
+// 이 루프의 각 반복은 기존 소수 하나를 고려하여,
+// 만약 후보(candidate)가 그 소수의 배수라면 후보를 배제한다.
+// 첫 번째 소수(2)는 후보가 홀수이므로 건너뛴다.
+```
+
+결론적으로, 제가 말하고자 하는 바는  
+우리가 알고리즘을 설명하기 위해 축적한 지식을  
+독자에게 전달하는 것은 매우 어렵다는 것입니다.  
+우리는 종종 자신이 알고 있는 것에만 몰두하여,  
+독자가 그것을 이해하기 위해선 전체를 다 읽어야 한다는 사실을 잊곤 합니다.
 
 **UB:**
 
-I think it's accurate.  I wouldn't delete it if I encountered it.  I don't think it should be a javadoc.
+저는 동의합니다.  
+그리고 저는 우리가 함께 코드를 검토하고,  
+코드와 주석 모두에 대해 개선할 점을 제안받는 것이  
+매우 중요하다고 생각합니다.
 
-The first sentence is redundant with the name `isMultipleOfNthPrimeFactor` and so could be deleted.  The warning of the side effect is useful.
-
-**JOHN:**
-
-I agree that the first sentence is largely redundant with the name,
-and I debated with myself about whether to keep it. I decided to keep it
-because I think it is a bit more precise than the name; it's also easier
-to read. You propose to eliminate the redundancy between the comment and
-the method name by dropping the comment; I would eliminate the redundancy by
-shortening the method name.
-
-By the way, you complained earlier about comments being less precise than
-code, but in this case the comment is *more* precise (the method
-name can't include text like `primes[n]`).
-
-**UB:**
-
-Fair enough.  There are times when precision is better expressed in a comment.
-
-Continuing with my critique of your comment above: The name `candidate` is synonymous with "Number being tested for primality".
-
-In the end, however, all the words in a comment are just going to have to sit in my brain
-until I understand why they are there.  I'm also going to have to worry if
-they are accurate.  So I'm going to have to read the code to understand and
-validate the comment.
-
-**JOHN:**
-
-Whoah. That loud sound you just heard was my jaw hitting the floor.
-Help me understand this a bit better: approximately what
-fraction of comments that you encounter in practice are you willing to
-trust without reading the code to verify them?
-
-**UB:**
-
-I look at every comment as potential misinformation.  At best they are a way to crosscheck the author's intent against the code. The amount of credence I give to a comment depends a lot on how easy they make that crosscheck.  When I read a comment that does not cause me to crosscheck, then I consider it to be of no value.  When I see a comment that causes me to crosscheck, and when that crosscheck turns out to be valuable, then that's a really good comment.
-
-Another way to say this is that the best comments tell me something surprising and verifiable about the code.  The worst are those that waste my time telling me something obvious, or incorrect.
-
-**JOHN:**
-
-It sounds like your answer is 0%: you don't trust any comment unless it has
-been verified against the code. This makes no sense to me. As I said above, the vast
-majority of comments are correct. It's not hard to write comments; the students
-in my software design class are doing this pretty well within a few weeks.
-It's also not hard to keep comments up to date as code evolves. Your refusal
-to trust comments is another sign of your irrational bias against comments.
-
-Refusing to trust comments incurs a very high cost. In order to understand
-how to invoke a method, you will have to read all of the code of that method;
-if the method invokes other methods, you will
-also have to read them, and the methods they invoke, recursively. This is
-an enormous amount of work in comparison to reading (and trusting) a
-simple interface comment like the one I wrote above.
-
-If you choose not to write an interface comment for methods, then you
-leave the interface of that method undefined. Even if someone reads the
-code of the method, they won't be able to tell which parts of the
-implementation are expected to remain the same and which parts may
-change (there is no way to specify this "contract" in code). This will
-result in misunderstanding and more bugs.
-
-**UB:**
-
-Well, I guess I've just been burned more than you have.  I've gone down too many false comment induced rabbit holes, and wasted too much time on worthless word salads.
-
-Of course my trust in comments is not a binary thing.  I read them if they are there; but
-I don't implicitly trust them.  The more gratuitous I feel the author was, or the less adept at english the author is, the less I trust the comments.
-
-As I said above, our IDEs tend to paint comments in an ignorable color.  I have my IDE paint comments in bright fire engine red because when I write a comment I intend for it to be read.
-
-By the same token I use long names as a substitute for comments because I intend for those long names to be read; and it is very hard for a programmer to ignore names.
-
-**JOHN:**
-
-I mentioned earlier that there are two general reasons why comments are
-needed. So far we've been discussing the first reason (abstraction).
-The second general reason for comments is for important information
-that is not obvious from the code. The algorithm in `PrimeGenerator`
-is very non-obvious, so quite a few comments are needed to help readers
-understand what is going on and why. Most of the algorithm's complexity
-arises because it is designed to compute primes efficiently:
-
-* The algorithm goes out of its way to avoid divisions, which were quite
-  expensive when Knuth wrote his original version (they aren't that expensive
-  nowadays).
-
-* The first multiple for each new prime number is computed by squaring the
-  prime, rather than multiplying it by 3. This is mysterious: why is it safe
-  to skip the intervening odd multiples? Furthermore, it might seem that this
-  optimization only has a small impact on performance, but in fact it makes an
-  *enormous* difference (orders of magnitude). Using the square has the
-  side effect that when
-  testing a candidate, only primes up to the square root of the
-  candidate are tested. If 3x were used as the initial multiple, primes
-  within a factor of 3 of the candidate would be tested; that's a *lot*
-  more tests.
-  This implication of using the square is so non-obvious that I only realized
-  it while preparing material for this discussion; it never occurred to me in
-  the many times I have discussed the code with students.
-
-Neither of these issues is obvious from the code; without
-comments, readers are left to figure them out on their own. The students
-in my class are generally unable to figure out either of them in the
-30 minutes I give them, but I think that comments would have
-allowed them to understand in a few minutes. Going back to my
-introductory remarks, this is an example where information is important,
-so it needs to be made available.
-
-Do you agree that there should be comments to explain each of these
-two issues?
-
-**UB:**
-
-I agree that the algorithm is subtle.  Setting the first prime multiple as the square of the prime was deeply mysterious at first.  I had to go on an hour-long bike ride to understand it.
-
-Would a comment help?  Perhaps.  However, my guess is that no one who has been reading our conversation has been helped by it, because you and I are now too intimate with the solution.  You and I can talk about that solution using words that fit into that intimacy; but our readers likely do not yet enjoy that fit.
-
-One solution is to paint a picture -- being worth a thousand words.  Here's my attempt.
-
-	                                                                X
-	                                                    1111111111111111111111111
-	       1111122222333334444455555666667777788888999990000011111222223333344444
-	   35791357913579135791357913579135791357913579135791357913579135791357913579
-	   !!! !! !! !  !!  ! !! !  !  !!  ! !!  ! !  !   ! !! !! !
-	 3 |||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-||-
-	 5 |||||||||||-||||-||||-||||-||||-||||-||||-||||-||||-||||-||||-
-	 7 |||||||||||||||||||||||-||||||-||||||-||||||-||||||-||||||-||||||-
-	11 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||-||||||||||-
-	13 ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-	...
-	113||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-
-I expect that our readers will have to stare at this for some time, and also look at the code.  But then there will be a _click_ in their brains and they'll say "Ohhh!  Yes!  I see it now!"
-
-**JOHN:**
-
-I found this diagram very hard to understand.
-It begs for supplemental English text to explain the ideas being
-presented. Even the syntax is non-obvious: what does
-`1111111111111111111111111` mean?
-
-Maybe we have a fundamental difference of philosophy here. I get the sense
-that you are happy to give readers a few clues and leave it to them to put
-the clues together. Perhaps you don't mind if people have to stare at something
-for a while to figure it out? I don't agree with this approach: it results
-in wasted time, misunderstandings, and bugs.
-I think software should be totally *obvious*, where readers don't need to
-be clever or "stare at this for some time" to figure things out.
-Suffering followed by catharsis is great for Greek tragedies, but not
-for reading code. Every question
-a reader might have should be naturally answered, either in the code or
-in comments. Key ideas and important conclusions should be stated explicitly,
-not left for the reader to deduce. Ideally, even if a reader is in a hurry
-and doesn't read the code very carefully, their first guesses about how
-things work (and why) should be correct. To me, that's clean code.
-
-**UB:**
-
-I don't disagree with your sentiment.  Good clean code should be as easy as possible to understand.  I want to give my readers as many clues as possible so that the code is intuitive to read.
-
-That's the goal.  As we are about to see, that can be a tough goal to achieve.
-
-**JOHN:**
-
-In that case, do you still stand by the "picture" you painted above? It doesn't
-seem consistent with what you just said. And if you really wanted to give
-your readers as many clues as possible, you'd include a lot more comments.
-
-**UB:**
-
-I stand by the picture as far as its accuracy is concerned.  And I think it
-makes a good crosscheck.  I have no illusions that it is easy to understand.
-
-This algorithm is challenging and will require work to comprehend.  I finally
-understood it when I drew this picture in my mind while on that bike ride.  When I got home I drew it for real and presented it in hopes that it might help
-someone willing to do the work to understand it.
-
-### Comments Summary
-
-**JOHN:**
-
-Let's wrap up this section of the discussion. Here is my summary of
-where we agree and disagree.
-
-* Our overall views of comments are fundamentally different. I see more
-value in comments than you do, and I believe that they play a fundamental
-and irreplaceable role in system design. You agree that there are places
-where comments are necessary, but that comments don't always make it
-easier to understand code, so you see far fewer places where comments are
-needed.
-
-* I would probably write 5-10x more lines of comments for a given piece of
-code than you would.
-
-* I believe that missing comments are a much greater cause of lost
-productivity than erroneous or unhelpful comments;
-you believe that comments are a net negative, as generally practiced:
-bad comments cost more time than good comments save.
-
-* You view it as problematic that comments are written in English
-rather than a programming language. I don't see this as particularly
-problematic and think that in many cases English works better.
-
-* You recommend that developers should take information that I would
-represent as comments and recast it into code if at all possible. One
-example of this is super-long method names. I believe that super-long names
-are awkward and hard to understand, and that it would be better to use
-shorter names supplemented with comments.
-
-* I believe that it is not possible to define interfaces and create
-abstractions without a lot of comments. You agree for public APIs, but see little need to comment
-interfaces that are internal to the team.
-
-* You are unwilling to trust comments until you have read code to
-verify them. I generally trust comments; by doing so, I don't need to read
-as much code as you do. You think this exposes me to too much risk.
-
-* We agree that implementation code only needs comments when the code is
-  nonobvious. Although neither of us argues for a large number of implementation
-  comments, I'm more likely to see value in them than you do.
-
-Overall, we struggled to find areas of agreement on this topic.
-
-**UB:**
-
-This is a fair assessment of our individual positions; which I assume are based on our
-different individual experiences.  Over the years I have found the vast majority
-of comments, as generally practiced in the industry, to be unhelpful. You seem to have found more
-help in the comments you have encountered.
+---
 
 ## John's Rewrite of PrimeGenerator
 
 **JOHN:**
 
-I mentioned that I ask the students in my software design class to rewrite
-`PrimeGenerator` to fix all of its design problems. Here is my rewrite
-(note: this was written before we began our discussion; given what I
-have learned during the discussion, I would now change several of the
-comments, but I have left this in its original form):
+저는 소프트웨어 디자인 수업의 학생들에게  
+`PrimeGenerator`를 재작성하여 디자인 문제를 모두 수정하도록 요청합니다.  
+아래는 제 재작성본입니다.  
+(참고: 이 코드는 우리가 토론하기 전 작성된 것으로,  
+토론 중 얻은 피드백에 따라 몇 가지 주석은 수정되었어야 하지만,  
+원본 그대로 두었습니다):
 
 ```java
 package literatePrimes;
@@ -1256,44 +1059,40 @@ import java.util.ArrayList;
 public class PrimeGenerator2 {
 
     /**
-     * Computes the first prime numbers; the return value contains the
-     * computed primes, in increasing order of size.
+     * 첫 번째 소수들을 계산한다; 반환값은 오름차순으로 정렬된 소수들을 담고 있다.
      * @param n
-     *      How many prime numbers to compute.
+     *      계산할 소수의 개수.
      */
     public static int[] generate(int n) {
         int[] primes = new int[n];
 
-        // Used to test efficiently (without division) whether a candidate
-        // is a multiple of a previously-encountered prime number. Each entry
-        // here contains an odd multiple of the corresponding entry in
-        // primes. Entries increase monotonically.
+        // 후보(candidate)가 이전에 만난 소수의 배수인지(나눗셈 없이) 효율적으로 테스트하기 위해 사용된다.
+        // 여기 각 항목은 소수(primes)에 대응하는 소수의 배수를 담고 있다.
+        // 항목들은 단조롭게 증가한다.
         int[] multiples = new int[n];
 
-        // Index of the last value in multiples that we need to consider
-        // when testing candidates (all elements after this are greater
-        // than our current candidate, so they don't need to be considered).
+        // 후보 테스트 시 고려해야 할 multiples의 마지막 인덱스
+        // (이 인덱스 이후의 모든 항목은 현재 후보보다 크므로 고려할 필요가 없다).
         int lastMultiple = 0;
 
-        // Number of valid entries in primes.
+        // primes 배열에 유효한 항목의 개수.
         int primesFound = 1;
 
         primes[0] = 2;
         multiples[0] = 4;
 
-        // Each iteration through this loop considers one candidate; skip
-        // the even numbers, since they can't be prime.
+        // 이 루프의 각 반복은 후보(candidate)를 고려한다;
+        // 짝수는 소수가 될 수 없으므로 건너뛴다.
         candidates: for (int candidate = 3; primesFound < n; candidate += 2) {
             if (candidate >= multiples[lastMultiple]) {
                 lastMultiple++;
             }
 
-            // Each iteration of this loop tests the candidate against one
-            // potential prime factor. Skip the first factor (2) since we
-            // only consider odd candidates.
+            // 이 루프의 각 반복은 후보를 한 가지 잠재적 소수 인자에 대해 테스트한다.
+            // 첫 번째 인자(2)는 후보가 홀수이므로 건너뛴다.
             for (int i = 1; i <= lastMultiple; i++) {
                 while (multiples[i] < candidate) {
-                    multiples[i] += 2*primes[i];
+                    multiples[i] += 2 * primes[i];
                 }
                 if (multiples[i] == candidate) {
                     continue candidates;
@@ -1301,14 +1100,12 @@ public class PrimeGenerator2 {
             }
             primes[primesFound] = candidate;
 
-            // Start with the prime's square here, rather than 3x the prime.
-            // This saves time and is safe because all of the intervening
-            // multiples will be detected by smaller prime numbers. As an
-            // example, consider the prime 7: the value in multiples will
-            // start at 49; 21 will be ruled out as a multiple of 3, and
-            // 35 will be ruled out as a multiple of 5, so 49 is the first
-            // multiple that won't be ruled out by a smaller prime.
-            multiples[primesFound] = candidate*candidate;
+            // 소수의 배수는 3배가 아니라 소수의 제곱부터 시작한다.
+            // 이는 시간을 절약하며, 그 이유는 작은 소수들이 중간의 배수를 걸러내기 때문이다.
+            // 예를 들어, 7의 경우 multiples의 값은 49에서 시작한다;
+            // 21은 3의 배수, 35는 5의 배수로 걸러지므로, 49가
+            // 더 작은 소수들에 의해 걸러지지 않는 첫 번째 배수이다.
+            multiples[primesFound] = candidate * candidate;
             primesFound++;
         }
         return primes;
@@ -1316,286 +1113,296 @@ public class PrimeGenerator2 {
 }
 ```
 
-Everyone can read this and decide for themselves whether they think
-it is easier to understand than the original. I'd like to mention a
-couple of overall things:
+모두가 이 코드를 읽고,  
+원본보다 이해하기 쉽다고 느끼는지 스스로 판단할 수 있습니다.  
+몇 가지 전반적인 사항을 언급하고자 합니다:
 
-* There is only one method. I didn't subdivide it because I felt the method already divides naturally into pieces that are distinct and understandable. It didn't seem to me that pulling out methods would improve readability significantly. When students rewrite the code, they typically have 2 or 3 methods, and those are usually OK too.
-* There are a *lot* of comments. It's extremely rare for me to write code with this density of comments. Most methods I write have no comments in the body, just a header comment describing the interface. But this code is subtle and tricky, so it needs a lot of comments to make the subtleties clear to readers. The long length of some of the comments is a red flag indicating that I struggled to find a clear and simple explanation for the code. Even with all the additional explanatory material this version is a bit shorter than the original (65 lines vs. 70).
+-   메서드가 단 하나뿐입니다.  
+    저는 메서드가 이미 자연스럽게 구분되어 있기에 분리할 필요가 없다고 느꼈습니다.  
+    학생들이 코드를 재작성할 때 보통 2~3개의 메서드로 나누는데,  
+    그것도 괜찮은 선택입니다.
+-   주석이 _매우 많이_ 있습니다.  
+    저는 보통 주석이 이 정도 밀집된 코드를 작성하지 않습니다.  
+    대부분의 메서드는 인터페이스를 설명하는 헤더 주석만 있으며,  
+    내부에는 주석이 없습니다.  
+    하지만 이 코드는 섬세하고 까다로운 알고리즘이므로,  
+    주석을 많이 달아 독자들이 미묘한 차이를 쉽게 이해할 수 있도록 해야 합니다.  
+    주석이 길어지는 것은 제가 코드를 명확하게 설명하기 위해 고심했음을 나타내는  
+    경고 신호일 수도 있습니다.  
+    추가적인 설명 자료에도 불구하고 이 버전은 원본(70줄)보다 조금 짧습니다 (65줄).
 
 **UB:**
 
-I presume this is a complete rewrite.  My guess is that you worked to understand the algorithm from *Clean Code* and then wrote this from scratch.  If that's so, then fair enough.
+저는 이것이 완전히 새롭게 작성된 코드라고 추정합니다.  
+당신은 *Clean Code*의 알고리즘을 이해한 후,  
+그것을 바탕으로 새로 코드를 작성한 것으로 보입니다.  
+그렇다면 공정합니다.
 
-In _Clean Code_ I *refactored* Knuth's algorithm in order to give it a little structure.  That's not the same as a complete rewrite.
+*Clean Code*에서는 Knuth의 알고리즘을 리팩토링하여 약간의 구조를 부여했습니다.  
+이는 클래스 내부를 여러 메서드로 분해한 것과는 다릅니다.
 
-Having said that, your version is much better than either Knuth's or mine.
+당신의 버전은 Knuth의 버전이나 제 버전보다 훨씬 낫습니다.
 
-I wrote that chapter 18 years ago, so it's been a long time since I saw and understood this algorithm.  When I first saw your challenge I thought: "Oh, I can figure out my own code!"  But, no.  I could see all the moving parts, but I could not figure out why those moving parts generated a list of prime numbers.
+저는 이 알고리즘을 처음 접했을 때,  
+이해하기 쉬워 보이는 코드와 주석에도 불구하고,  
+소수가 생성되는 이유를 전혀 파악할 수 없었습니다.  
+결국 긴 시간 동안 천장을 바라보고, 눈을 감고,  
+머릿속으로 시각화한 후, 자전거를 타고야 이해할 수 있었습니다.
 
-So then I looked at your code.  I had the same problem.  I could see all the moving parts, all with comments, but I still could not figure out why those moving parts generated a list of prime numbers.
-
-Figuring that out required a lot of staring at the ceiling, closing my eyes, visualizing, and riding my bike.
-
-Among the problems I had were the comments you wrote.  Let's take them one at a time.
+문제 중 하나는 바로 당신이 작성한 주석이었습니다.  
+하나씩 살펴보겠습니다.
 
 ```java
 /**
- * Computes the first prime numbers; the return value contains the
- * computed primes, in increasing order of size.
+ * 첫 번째 소수를 계산한다; 반환값은 오름차순으로 정렬된 소수들을 담고 있다.
  * @param n
- *      How many prime numbers to compute.
+ *      계산할 소수의 개수.
  */
 public static int[] generate(int n) {
 ```
 
-It seems to me that this would be better as:
+저는 이것이 다음과 같이 표현되는 것이 더 낫다고 생각합니다:
 
 ```java
 public static int[] generateNPrimeNumbers(int n) {
 ```
 
-or if you must:
+또는 꼭 Javadoc 형식을 유지해야 한다면:
 
 ```java
-//Return the first n prime numbers
+// 첫 번째 n개의 소수를 반환한다.
 public static int[] generate(int n) {
 ```
 
-I'm not opposed to Javadocs as a rule; but I write them only when absolutely necessary. I also have an aversion for descriptions and `@param` statements that are perfectly obvious from the method signature.
+Javadoc은 필요할 때만 사용합니다.  
+또한 인자에 대한 설명이 시그니처만으로 충분한 경우,  
+불필요한 주석은 피하고자 합니다.
 
-The next comment cost me a good 20 minutes of puzzling things out.
-
-```java
-// Used to test efficiently (without division) whether a candidate
-// is a multiple of a previously-encountered prime number. Each entry
-// here contains an odd multiple of the corresponding entry in
-// primes. Entries increase monotonically.
-```
-
-First of all I'm not sure why the "division" statement is necessary.  I'm old school, so I expect that everyone knows to avoid division in inner loops if it can be avoided.  But maybe I'm wrong about that...
-
-Also, the *Sieve of Eratosthenes* does not do division, and is a lot easier to understand *and explain* than this algorithm.  So why this particular algorithm?  I think Knuth was trying to save _memory_ -- and in 1982 saving memory was important.  This algorithm uses a lot less memory than the sieve.
-
-Then came the phrase: `Each entry here contains an odd multiple...`.  I looked at that, and then at the code, and I saw: `multiples[0] = 4;`.
-
-"That's not odd" I said to myself.  "So maybe he meant even."
-
-So then I looked down and saw: `multiples[i] += 2*primes[i];`
-
-"That's adding an even number!" I said to myself.  "I'm pretty sure he meant to say 'even' instead of 'odd'."
-
-I hadn't yet worked out what the `multiples` array was.  So I thought it was perfectly reasonable that it would have even numbers in it, and that your comment was simply an understandable word transposition.  After all, there's no compiler for comments so they suffer from the kinds of mistakes that humans often make with words.
-
-It was only when I got to `multiples[primesFound] = candidate*candidate;` that I started to question things.  If the `candidate` is prime, shouldn't `prime*prime` be odd in every case beyond 2?  I had to do the math in my head to prove that.  (2n+1)(2n+1) = 4n^2+4n+1 ... Yeah, that's odd.
-
-OK, so the `multiples` array is full of odd multiples, except for the first element, since it will be multiples of 2.
-
-So perhaps that comment should be:
+다음 주석은 저에게 약 20분간 혼란을 주었습니다.
 
 ```java
-// multiples of corresponding prime.
+// 후보(candidate)가 이전에 만난 소수의 배수인지(나눗셈 없이) 효율적으로 테스트하기 위해 사용된다.
+// 여기 각 항목은 소수(primes)에 대응하는 소수의 배수를 담고 있다.
+// 항목들은 단조롭게 증가한다.
 ```
 
-Or perhaps we should change the name of the array to something like `primeMultiples` and drop the comment altogether.
+우선, “나눗셈 없이”라는 부분이 왜 필요한지 잘 이해되지 않습니다.  
+저는 옛날 방식에 익숙하여,  
+내부 루프에서 나눗셈을 피하는 것이 좋다는 것을 알고 있습니다만,  
+모두가 그렇다고 단정할 수는 없습니다.
 
-Moving on to the next comment:
+또한, *에라토스테네스의 체(Sieve of Eratosthenes)*는  
+나눗셈을 사용하지 않고,  
+더 이해하기 쉽고 설명하기 쉬운데,  
+왜 이 알고리즘을 택했는지 의문입니다.  
+저는 Knuth가 메모리 절약을 위해 이 알고리즘을 선택했으리라 생각합니다.  
+1982년 당시 메모리 절약은 매우 중요한 이슈였으니까요.
+
+그리고 “각 항목은 소수의 홀수 배수를 담고 있다”라는 표현을  
+보면, 코드에서는 `multiples[0] = 4;`라고 되어 있습니다.
+
+“그것은 홀수가 아니다”라고 생각하게 됩니다.  
+그래서 아마 “홀수” 대신 “짝수”를 의도한 것일 수 있습니다.
+
+그러나 아래의 `multiples[i] += 2 * primes[i];`를 보면,  
+짝수인 숫자가 더해지고 있음을 알 수 있습니다.  
+후반부에서 `multiples[primesFound] = candidate * candidate;`를  
+보면, 후보(candidate)가 소수라면 그 제곱은 2 이후부터 모두 홀수가 됩니다.
+
+즉, `multiples` 배열은 첫 번째 항목을 제외하면 홀수 배수들을 담고 있습니다.
+
+따라서 주석은 다음과 같이 수정되어야 할 것입니다:
 
 ```java
-// Each iteration of this loop tests the candidate against one
-// potential prime factor. Skip the first factor (2) since we
-// only consider odd candidates.
+// 각 항목은 해당 소수의 배수를 담고 있다. (단, 첫 항목은 사용되지 않으며,
+// 이후 항목들은 홀수 배수를 포함한다.)
 ```
 
-That doesn't make a lot of sense.  The code it's talking about is:
+다음 주석을 보겠습니다:
+
+```java
+// 이 루프의 각 반복은 후보를 한 가지 잠재적 소수 인자에 대해 테스트한다.
+// 첫 번째 인자(2)는 후보가 홀수이므로 건너뛴다.
+```
+
+처음에는 이 주석이 무슨 의미인지 잘 이해되지 않았습니다.  
+해당 루프의 코드를 보면:
 
 ```java
 for (int i = 1; i <= lastMultiple; i++) {
     while (multiples[i] < candidate) {
 ```
 
-The `multiples` array, as we have now learned, is an array of *multiples* of prime numbers.  This loop is not testing the candidate against prime *factors*, it's testing it against the current prime _multiples_.
+`multiples` 배열은 소수의 배수들을 담고 있으므로,  
+이 루프는 후보가 소수의 **배수**와 일치하는지 검사하는 것입니다.  
+이 부분은 “인자”가 아니라 “배수”에 대해 테스트하고 있습니다.
 
-Fortunately for me the third or fourth time I read this comment I realized that you really meant to use the word "multiples".  But the only way for me to know that was to understand the algorithm.  And when I understand the algorithm, why do I need the comment?
+다행히도 몇 번 읽은 후,  
+당신은 “multiples”라는 단어를 사용하려고 했다는 것을 깨달았습니다.  
+하지만 그 의미를 파악하기 위해 알고리즘 전체를 이해해야만 했습니다.  
+그리고 알고리즘을 이해하면 왜 주석이 필요한지도 명확해집니다.
 
-That left me with one final question.  What the deuce was the reason behind:
-
-```java
-multiples[primesFound] = candidate*candidate;
-```
-
-Why the square?  That makes no sense.  So I changed it to:
+마지막으로,  
+`multiples[primesFound] = candidate * candidate;`의 이유는 무엇일까요?  
+왜 제곱을 사용하는 것일까요?  
+저는 이를 다음과 같이 변경해 보았습니다:
 
 ```java
 multiples[primesFound] = candidate;
 ```
 
-And it worked just fine.  So this must be an optimization of some kind.
+그리고 정상적으로 동작했습니다.  
+즉, 이것은 어떤 최적화 기법임에 틀림없습니다.
 
-Your comment to explain this is:
+이를 설명하는 주석은 다음과 같습니다:
 
 ```java
-// Start with the prime's square here, rather than 3x the prime.
-// This saves time and is safe because all of the intervening
-// multiples will be detected by smaller prime numbers. As an
-// example, consider the prime 7: the value in multiples will
-// start at 49; 21 will be ruled out as a multiple of 3, and
-// 35 will be ruled out as a multiple of 5, so 49 is the first
-// multiple that won't be ruled out by a smaller prime.
+// 소수의 3배가 아니라 제곱부터 시작한다.
+// 이는 시간 절약에 도움이 되며, 그 이유는 작은 소수들이
+// 그 사이의 배수를 모두 걸러내기 때문이다. 예를 들어, 7의 경우
+// multiples에는 49가 시작값으로 들어가고, 21은 3의 배수, 35는 5의 배수로
+// 걸러지므로 49가 첫 번째 후보가 된다.
 ```
 
-The first few times I read this it made no sense to me at all.  It was just a jumble of numbers.
+처음 몇 번 읽었을 때는 전혀 이해되지 않았습니다.  
+숫자들이 뒤섞여 있어 혼란스러웠습니다.  
+저는 천장을 바라보고, 눈을 감고,  
+머릿속으로 시각화하여야 했습니다.  
+그래서 결국 소수 2의 배수들이 어느 순간 2×3, 2×5 등의 값이  
+`multiples` 배열에 들어가게 된다는 것을 깨달았습니다.  
+그리고 “아, 그렇구나!”라는 깨달음이 왔습니다.
 
-I stared at the ceiling, and closed my eyes to visualize. I couldn't see it.  So I went on a long contemplative bike ride during which I realized that the prime multiples of 2 will at one point contain 2\*3 and then 2\*5.  So the `multiples` array will at some point contain multiples of primes *larger* than the prime they represent.  _And it clicked!_
+갑자기 모든 것이 명확해졌습니다.  
+`multiples` 배열은 에라토스테네스의 체에서  
+화이트보드에 숫자를 지우고, 다음 배수만 남기는 것과  
+비슷한 역할을 하는 것입니다.
 
-Suddenly it all made sense. I realized that the `multiples` array was the equivalent of the array of booleans we use in the *Sieve of Eratosthenes* -- but with a really interesting twist.  If you were to do the sieve on a whiteboard, you _could_ erase every number less than the candidate, and only cross out the numbers that were the next multiples of all the previous primes.
+이 설명은 제게는 완벽하게 이해가 되지만,  
+읽는 이들이 이해하기에는 여전히 어려울 수 있습니다.  
+결국, 저는 주석을 다시 보며 당신이 전달하려는 바를  
+이해할 수 있었습니다.
 
-That explanation makes perfect sense to me -- now, but I'd be willing to bet that those who are reading it are puzzling over it.  The idea is just hard to explain.
+### 두 프로그래머의 이야기
 
-Finally, I went back to your comment and could see what you were saying.
+결국, 당신과 저는 모두 같은 함정에 빠졌습니다.  
+저는 18년 전에 그 오래된 알고리즘을 리팩토링하며,  
+그 메서드와 변수 이름들이 제 의도를 분명히 전달해 주리라 믿었습니다—  
+_왜냐하면 제가 그 알고리즘을 이해했기 때문입니다._
 
-### A Tale of Two Programmers
+당신은 그 코드를 꽤 전 작성했고,  
+주석을 달아서 의도를 설명하려 했습니다—  
+_왜냐하면 당신이 그 알고리즘을 이해했기 때문입니다._
 
-The bottom line here is that you and I both fell into the same trap.  I refactored that old algorithm 18 years ago, and I thought all those method and variable names would make my intent clear -- *because I understood that algorithm*.
+그러나 18년이 지난 후,  
+제 이름들은 더 이상 제게도, 당신이나 당신의 학생들에게도 도움이 되지 않습니다.  
+그리고 당신의 주석 역시 저에게는 도움이 되지 않았습니다.
 
-You wrote that code awhile back and decorated it with comments that you thought would explain your intent -- *because you understood that algorithm*.
+우리는 서로 내부에 갇혀,  
+외부에 있는 사람들에게 우리가 본 것을 전달하려 애썼습니다.
 
-But my names didn't help me 18 years later.  They didn't help you, or your students either.  And your comments didn't help me.
-
-We were inside the box trying to communicate to those who stood outside and could not see what we saw.
-
-The bottom line is that it is very difficult to explain something to someone who is not intimate with the details you are trying to explain. Often our explanations make sense only after the reader has worked out the details for themself.
+결국, 무언가를 설명하는 것은,  
+작성자와 독자가 동일한 세부 사항에 친숙하지 않다면 매우 어렵습니다.
 
 **JOHN:**
 
-There's a lot of stuff in your discussion above, but I think it all boils down
-to one thing: you don't like the comments that I wrote. As I mentioned earlier,
-complexity is in the eye of the reader: if you say that my comments were
-confusing or didn't help you to understand the code, then I have to take that
-seriously.
+당신이 제 주석을 싫어하는 이유는 결국  
+주석이 독자의 이해를 돕지 못한다는 것입니다.  
+앞서 말했듯이, 복잡함은 독자의 눈에 달려있습니다:  
+만약 당신이 내 주석이 혼란스럽거나 이해를 돕지 못한다고 생각한다면,  
+저는 그 점을 심각하게 받아들여야 합니다.
 
-At the same time, you have made it clear that you don't see much value in
-comments in general. Your preference is to have essentially no
-comments for this code (or any code). You argue above that there is simply nothing that
-comments can do to make the code easier to understand; the only way to
-understand the code is to read the code. That is a cop-out.
+동시에, 당신은 주석에 대해 거의 아무런 가치를 보지 않는다고  
+분명히 했습니다.  
+즉, 제게는 주석보다 더 많은 줄의 주석을  
+작성할 가능성이 높습니다.  
+저는 누락된 주석이 잘못된 주석보다 생산성 손실을  
+더 많이 야기한다고 믿습니다.  
+당신은 주석이 영어로 작성되어야 한다는 점에 대해 문제를 제기합니다.  
+저는 많은 경우 영어가 더 잘 작동한다고 봅니다.
+
+당신은 주석 대신 정보를 코드로 재구성하라고 권장합니다.  
+예를 들어, 매우 긴 메서드 이름처럼 말이죠.  
+저는 긴 이름이 다루기 어렵고 이해하기 어렵다고 생각하며,  
+짧은 이름과 주석의 조합이 낫다고 봅니다.
+
+또한, 저는 인터페이스와 추상화를 정의하기 위해서는  
+많은 주석이 필요하다고 믿습니다.  
+당신은 공개 API에 한해서만 주석이 필요하다고 보지만,  
+내부적으로는 주석이 불필요하다고 봅니다.
+
+그리고 당신은 주석을 전부 읽어보기 전까지는  
+주석을 신뢰하지 않겠다고 합니다.  
+저는 주석을 대체로 신뢰하는 편이라,  
+그렇게 함으로써 코드 전체를 읽지 않아도 됩니다.  
+만약 주석을 쓰지 않는다면,  
+그 메서드의 인터페이스를 정의하지 않는 셈이 되어,  
+코드를 전부 읽어야만 그 인터페이스를 알 수 있게 됩니다.  
+이는 오해와 버그를 낳을 것입니다.
 
 **UB:**
 
-Sorry to interrupt you; but I think you are overstating my position.  I certainly never said that comments can never be helpful.  Sometimes, of course, they are.  What I said was that I only trust them if the code validates them.  Sometimes a comment will make that validation a lot easier.
+음, 저는 주석에 대해 절대적인 신뢰를 하지 않습니다.  
+저는 주석이 있으면 읽긴 하지만,  
+무조건적으로 믿지는 않습니다.  
+주석이 과도하거나, 작성자의 영어 실력이 부족해 보이면,  
+그 주석에 대한 신뢰도는 떨어집니다.
+
+앞서 말한 바와 같이, 우리 IDE는 주석을 쉽게 무시할 수 있도록  
+옅은 색으로 칠하는 경향이 있습니다.  
+저는 제 IDE에서 주석을 밝은 소방차 빨간색으로 칠합니다.  
+이는 제가 주석을 작성할 때 반드시 읽히길 원하기 때문입니다.
+
+동일하게, 저는 주석 대신 긴 이름을 주로 사용합니다.  
+긴 이름은 주석보다 무시하기 어렵기 때문입니다.
 
 **JOHN:**
 
-You keep saying that you sometimes find use for comments, but the reality
-is that "sometimes" almost never occurs in your code. We'll see this when
-we look at your revision of my code.
+즉, 결론적으로 당신은 “주석이 전혀 도움이 되지 않는다”는  
+입장이시군요.  
+하지만 저는 주석이,  
+메서드의 인터페이스를 문서화하여 독자가  
+코드를 읽지 않고도 인터페이스만으로 메서드를 사용할 수 있게 해준다고 생각합니다.  
+만약 누군가 메서드를 호출하려면,  
+그 메서드의 코드를 전부 읽어야 하게 될 것입니다;  
+즉, 이는 엄청난 작업량을 요구하게 됩니다.
 
-Now back to my point. In order to
-write our various versions of the code, you and I had to accumulate a lot of
-knowledge about the algorithm, such as why it's OK for the first multiple
-of a prime to be its square. Unfortunately, not all of that knowledge can
-be represented in the code. It is our professional responsibility to do
-the best we can to convey
-that knowledge in comments, so that readers do not
-have to reconstruct it over and over. Even if the resulting comments are
-imperfect, they will make the code easier to understand.
-
-If a situation like this occurred in real life I would work with
-you and others to improve my comments. For example, I would ask you
-questions to get a better sense of
-why the "squared prime" comment didn't seem to help you:
-* Are there things in the comment that are misleading or confusing?
-* Is there some important piece of information you acquired on your
-  bike ride that suddenly made things clear?
-
-I would also show the comment to a few other people to get their takes
-on it. Then I would rework the comment to improve it.
-
-Given your fundamental disbelief in comments, I think it's likely that
-you would still see no value in the comment, even after my reworking.
-In this case I would show the comment to other people, particularly those
-who have a more positive view of comments in general, and get
-their input. As long as the comment is not misleading and at least a few
-people found it helpful, I would retain it.
-
-Now let me discuss two specific comments that you objected to. The
-first comment was the one for the `multiples` variable:
-
-```java
-// Used to test efficiently (without division) whether a candidate
-// is a multiple of a previously-encountered prime number. Each entry
-// here contains an odd multiple of the corresponding entry in
-// primes. Entries increase monotonically.
-```
-
-There is a bug in this comment that you exposed (the first entry is not odd);
-good catch! You then argued that most of the information in the comment
-is unnecessary and proposed this as an alternative:
-
-```java
-// multiples of corresponding prime.
-```
-
-You have left out too much useful information here. For example, I don't think
-it is safe to assume that readers will figure out that the motivation is
-avoiding divisions. It's always better to state these assumptions and
-motivations clearly so that there will be no confusion. And I think it's
-helpful for readers to know that these entries never decrease.
-I would simply fix the bug, leaving all of the information intact:
-
-```java
-// Used to test efficiently (without division) whether a candidate
-// is a multiple of a previously-encountered prime number. Each entry
-// (except the first, which is never used) contains an odd multiple of
-// the corresponding entry in primes. Entries increase monotonically.
-```
-
-The second comment was this one, for the `for` loop:
-
-```java
-// Each iteration of this loop tests the candidate against one
-// potential prime factor. Skip the first factor (2) since we
-// only consider odd candidates.
-```
-
-You objected to this comment because the code of the loop doesn't actually
-test the candidate against the prime factor; it tests it against a multiple.
-When I write implementation comments like this, my goal is not to restate
-the code; comments like that don't usually provide much value. The goal here was
-to say *what* the code is doing in a logical sense, not *how* it does it.
-In that sense, the comment is correct.
-
-However, if a comment causes confusion in the reader, then it is not a
-good comment. Thus, I would rewrite this comment to make it clear that
-it describes the abstract function of the code, not its
-precise behavior:
-
-```java
-// Each iteration of this loop considers one existing prime, ruling
-// out the candidate if it is a multiple of that prime. Skip the
-// first prime (2) since we only consider odd candidates.
-```
-
-To conclude, I agree with your assertion "it is very difficult to explain
-something to someone who is not intimate with the details you are trying
-to explain." And yet, it is our responsibility as programmers to do exactly
-that.
+만약 당신이 인터페이스 주석을 쓰지 않는다면,  
+그 인터페이스는 정의되지 않은 채 남게 됩니다.  
+어떤 메서드의 코드를 읽더라도,  
+어떤 부분은 변하지 않아야 하고, 어떤 부분은 변할 수 있는지  
+구분할 수 없게 됩니다(코드로 “계약(contract)”을 명시할 방법이 없습니다).  
+이로 인해 오해와 버그가 발생하게 됩니다.
 
 **UB:**
 
-I'm glad we agree.  We also agree about getting others to review the code and make recommendations on the code _and_ the comments.
+글쎄요, 제가 말하려는 바는,  
+주석은 항상 잠재적 잘못된 정보로 간주되어야 하며,  
+그것을 검증하기 전까지는 신뢰해서는 안 된다는 것입니다.  
+그래서 저는 주석이 있더라도,  
+필요하면 반드시 코드를 직접 읽어서 검증합니다.
 
-## Bob's Rewrite of PrimeGenerator2
+---
+
+## John's Rewrite of PrimeGenerator2 이후
 
 **UB:**
 
-When I saw your solution, and after I gained a good understanding of it.  I refactored it just a bit.  I loaded it into my IDE, wrote some simple tests, and extracted a few simple methods.
+당신의 솔루션을 보고, 충분히 이해한 후,  
+저는 그것을 약간 리팩토링했습니다.  
+IDE에 코드를 로드하고, 간단한 테스트를 작성한 뒤,  
+몇 가지 간단한 메서드를 추출했습니다.
 
-I also got rid of that *awful* labeled `continue` statement.  And I added 3 to the primes list so that I could mark the first element as *irrelevant* and give it a value of -1.  (I think I was still reeling from the even/odd confusion.)
+또한 그 _끔찍한_ 레이블이 붙은 `continue` 문을 제거했습니다.  
+그리고 첫 번째 요소를 *무시*하기 위해, 3을 소수 리스트에 추가했습니다.  
+(아직도 짝수/홀수 혼란에서 완전히 벗어나지 못한 상태였습니다.)
 
-I like this because the implementation of the `generateFirstNPrimes` method describes the moving parts in a way that hints at what is going on.  It's easy to read that implementation and get a glimpse of the mechanism.  I'm not at all sure that the comment helps.
+저는 이 버전이 `generateFirstNPrimes` 메서드의  
+구현이 무슨 일이 벌어지고 있는지 힌트를 주기 때문에 읽기 쉽다고 생각합니다.  
+다만, 주석이 정말 도움이 되는지는 잘 모르겠습니다.
 
-I think it is just the reality of this algorithm that the effort required to properly explain it, and the effort required for anyone else to read and understand that explanation is roughly equivalent to the effort needed to read the code and go on a bike ride.
+이 알고리즘의 특성상,  
+이해를 돕기 위한 노력과, 그 설명을 이해하는 데 필요한 노력이,  
+코드를 읽고 자전거를 타는 노력과 비슷한 수준인 것 같습니다.
 
 ```java
 package literatePrimes;
@@ -1607,19 +1414,16 @@ public class PrimeGenerator3 {
     private static int primesFound;
     private static int candidate;
 
-    // Lovely little algorithm that finds primes by predicting
-    // the next composite number and skipping over it. That prediction
-    // consists of a set of prime multiples that are continuously
-    // increased to keep pace with the candidate.
+    // 소수임을 예측하여 다음 합성수를 건너뛰는 멋진 알고리즘.
+    // 이 예측은 지속적으로 증가하는 소수의 배수 집합에 기초한다.
 
     public static int[] generateFirstNPrimes(int n) {
         initializeTheGenerator(n);
 
         for (candidate = 5; primesFound < n; candidate += 2) {
             increaseEachPrimeMultipleToOrBeyondCandidate();
-            if (candidateIsNotOneOfThePrimeMultiples()) {
+            if (candidateIsNotOneOfThePrimeMultiples())
                 registerTheCandidateAsPrime();
-            }
         }
         return primes;
     }
@@ -1629,12 +1433,12 @@ public class PrimeGenerator3 {
         primeMultiples = new int[n];
         lastRelevantMultiple = 1;
 
-        // prime the pump. (Sorry, couldn't resist.)
+        // 시동 걸기. (농담입니다.)
         primesFound = 2;
         primes[0] = 2;
         primes[1] = 3;
 
-        primeMultiples[0] = -1;// irrelevant
+        primeMultiples[0] = -1; // 무시됨
         primeMultiples[1] = 9;
     }
 
@@ -1664,86 +1468,84 @@ public class PrimeGenerator3 {
 
 **JOHN:**
 
-This version is a considerable improvement over the version in *Clean Code*.
-Reducing the number of methods made the code easier to read and resulted
-in cleaner interfaces. If it were properly commented, I think this version
-would be about as easy to read as my version (the additional methods you
-created didn't particularly help, but they didn't hurt either). I suspect
-that if we polled readers, some would like your version better and some
-would prefer mine.
+이 버전은 _Clean Code_ 버전보다 상당히 개선되었습니다.  
+메서드 수를 줄여 코드가 읽기 쉬워졌고, 인터페이스도 깔끔해졌습니다.  
+만약 적절한 주석이 달린다면, 이 버전은 제 버전만큼 읽기 쉬울 것입니다  
+(당신이 추가한 메서드들이 크게 도움이 되진 않았지만, 해가 되지도 않았습니다).  
+만약 독자들을 대상으로 설문조사를 한다면,  
+어떤 사람은 당신의 버전을 선호할 것이고, 어떤 사람은 제 버전을 선호할 것입니다.
 
-Unfortunately, this revision of the code creates a serious performance
-regression: I measured a factor of 3-4x slowdown compared to either
-of the earlier revisions. The problem is that you changed the processing of a
-particular candidate from a single loop to two loops (the `increaseEach...` and
-`candidateIsNot...` methods). In the loop from earlier revisions, and in
-the `candidateIsNot`
-method, the loop aborts once the candidate is disqualified (and
-most candidates are quickly eliminated). However,
-`increaseEach...` must examine every entry in `primeMultiples`.
-This results in 5-10x as many loop iterations and a 3-4x overall slowdown.
+불행하게도, 이 코드 수정 버전은 심각한 성능 저하를 일으킵니다:  
+이전 버전들에 비해 3~4배 정도 느려졌습니다.  
+문제는 특정 후보(candidate)를 처리할 때  
+하나의 루프 대신 두 개의 루프로 나누었기 때문입니다.  
+이전 버전의 루프와 `candidateIsNot...` 메서드는 후보가  
+소수의 배수로 판정되면 즉시 반복을 종료합니다.  
+그러나 `increaseEach...`는 `primeMultiples`의 모든 항목을 검사합니다.  
+이로 인해 반복 횟수가 5~10배 증가하여 전체적으로 3~4배 느려집니다.
 
-Given that the whole reason for the current algorithm (and its complexity)
-is to maximize performance, this slowdown is unacceptable. The two
-methods must be combined.
+전체 알고리즘의 목적이 성능 극대화인 점을 감안할 때,  
+이 속도 저하는 용납할 수 없습니다.  
+따라서 두 메서드는 결합되어야 합니다.
 
-I think what happened here is that you were so focused on something
-that isn't actually all that important (creating the tiniest possible methods)
-that you dropped the ball on other issues that really are important.
-We have now seen this twice. In the original version of `PrimeGenerator`
-you were so determined to make tiny methods that you didn't notice that the
-code was becoming incomprehensible. In this version you were so eager to
-chop up my single method that you didn't notice that you were blowing up the
-performance.
+아마도, 당신은 너무 작은 메서드에 집중한 나머지  
+중요한 문제, 즉 성능 최적화를 간과한 것 같습니다.  
+초기 버전의 `PrimeGenerator`에서는 당신이 너무 작은 메서드에 집착하여  
+코드의 복잡성을 놓쳤고,  
+이 버전에서는 제 단일 메서드를 너무 잘게 쪼개어 성능을 떨어뜨렸습니다.
 
-I don't think this was just an unfortunate combination of oversights.
-One of the most important things
-in software design is to identify what is important and focus on that;
-if you focus on things that are unimportant, you're likely to mess up the
-things that are important.
+저는 이것이 단순한 우연이 아니라,  
+소프트웨어 디자인에서 중요한 것을 식별하고 집중해야 한다는  
+중요한 교훈이라고 생각합니다.
 
-The code in your revision is still under-commented. You believe
-that there is no meaningful way for comments to assist the reader in
-understanding the code. I think this stems from your general disbelief in
-the value of comments; you are quick to throw in the towel.
-This algorithm is unusually difficult to explain,
-but I still believe that comments can help. For example, I believe you
-must make some attempt to help readers understand why the first multiple
-for a prime is the square of the prime. You have taken a lot of time to
-develop your understanding of this; surely there must be some way to convey
-that understanding to others? If you had included that information in
-your original version of the code you could have saved yourself that long
-bike ride.
-Giving up on this is an abdication of professional responsibility.
+당신의 수정본은 여전히 주석이 부족합니다.  
+당신은 주석이 독자의 이해를 돕지 못한다고 주장합니다.  
+저는 이것이 TDD에 대한 당신의 일반적인 불신에서 비롯된다고 생각합니다.  
+이 알고리즘은 설명하기 매우 어려운 만큼,  
+주석으로 독자에게 왜 소수의 첫 배수가 소수의 제곱이어야 하는지  
+설명해야 한다고 생각합니다.  
+이런 정보를 주석에 담았다면,  
+그 긴 자전거 타기 시간 대신 빠르게 이해할 수 있었을 것입니다.  
+주석을 포기하는 것은  
+전문가로서의 책임을 회피하는 것입니다.
 
-The few comments that you included in your revision are of little value.
-The first comment is too cryptic to provide much help: I can't
-make any sense of the phrase "predicting the next composite number and
-skipping over it" even though I completely understand the code it purports
-to explain. One of the comments is just a joke; I was surprised to see
-this, given your opposition to extraneous comments.
+몇 개의 주석은 당신이 수정본에 포함시켰지만,  
+그 주석들은 별로 도움이 되지 않습니다.  
+첫 번째 주석은 “다음 합성수를 예측하고 건너뛴다”는 구절이 너무 암호적이어서,  
+무슨 의미인지 전혀 파악할 수 없습니다.  
+또 다른 주석은 그냥 농담입니다;  
+당신이 불필요한 주석에 대해 강하게 반대한다고 하였으니 놀랍습니다.
 
-Clearly you and I live in different universes when it comes to comments.
+분명히 당신과 저는 주석에 관한 세계관이 다릅니다.
 
-Finally, I don't understand why you are offended by the labeled `continue`
-statement in my code. This is a clean and elegant solution to the problem
-of escaping from nested loops. I wish more languages
-had this feature; the alternative is awkward code where you set a variable,
-then exit one level of loop, then check the variable and exit the next
-level.
+마지막으로, 왜 당신은 레이블이 붙은 `continue` 문을  
+문제가 있다고 생각하는지 이해할 수 없습니다.  
+저는 이것이 중첩된 루프에서 벗어나기 위한  
+깔끔하고 우아한 해결책이라고 생각합니다.  
+더 많은 언어가 이런 기능을 제공했으면 좋겠습니다;  
+그렇지 않으면 변수 설정 후 한 단계씩 루프를 빠져나가는  
+어색한 코드가 될 것입니다.
 
 **UB:**
 
-Good catch!  I would have caught that too had I thought to profile the solution.  You are right that separating the two loops added some unnecessary iteration.  I found a nice way to solve that problem without using the horrible `continue`.  My updated version is now faster than yours!  A million primes in 440ms as opposed to yours which takes 561ms.  ;-) Below are just the changes.
+좋은 지적입니다!  
+저도 프로파일링을 했더라면 그 문제를 잡았을 것입니다.  
+당신 말씀이 맞습니다.  
+두 개의 루프로 분리하면 불필요한 반복이 발생합니다.  
+당신이 말씀하신 대로,  
+저는 이 문제를 `continue` 없이 해결하는 좋은 방법을 찾았습니다.  
+제 업데이트된 버전은 이제 당신의 것보다 빠릅니다!  
+백만 개의 소수를 440ms 안에 생성하는 반면, 당신의 버전은 561ms가 걸립니다. ;-)  
+아래는 변경된 부분입니다.
 
 ```java
 public static int[] generateFirstNPrimes(int n) {
     initializeTheGenerator(n);
-    
+
     for (candidate = 5; primesFound < n; candidate += 2)
         if (candidateIsPrime())
             registerTheCandidateAsPrime();
-    
+
     return primes;
 }
 
@@ -1763,505 +1565,551 @@ private static boolean candidateIsPrime() {
 
 **JOHN:**
 
-Yep, that fixes the problem. I note that you are now down to 4 methods,
-from 8 in the *Clean Code* version.
+네, 그 변경사항으로 문제가 해결되었습니다.  
+이제 당신은 메서드 수를 8개에서 4개로 줄였습니다.
 
-## Test-Driven Development
+---
+
+## 테스트 주도 개발 (TDD)
 
 **JOHN:**
 
-Let's move on to our third area of disagreement, which is Test-Driven
-Development. I am a huge fan of unit testing. I believe that unit tests are
-an indispensable part of the software development process and pay for
-themselves over and over. I think we agree on this.
+이제 우리의 세 번째 의견 차이 주제인 테스트 주도 개발(TDD)로 넘어갑니다.  
+저는 단위 테스트의 열렬한 팬입니다.  
+단위 테스트는 소프트웨어 개발 과정에서 필수적이며,  
+계속해서 그 가치를 증명한다고 믿습니다.  
+이 점에서는 우리가 의견을 같이합니다.
 
-However, I am not a fan of Test-Driven Development (TDD), which dictates
-that tests must be written before code and that code must be written
-and tested in tiny increments. This approach has serious problems
-without any compensating advantages that I have been able to identify.
+하지만 저는 테스트를 코드보다 먼저 작성하고,  
+코드를 아주 짧은 단위로 작성 및 테스트하도록 강제하는  
+테스트 주도 개발(TDD)을 좋아하지 않습니다.  
+이 접근 방식에는 치명적인 문제가 있으며,  
+제가 확인할 수 있는 보상은 거의 없습니다.
 
 **UB:**
 
-As I said at the start I have carefully read _A Philosophy of Software Design_. I found it to be full of worthwhile insights, and I strongly agree with most of the points you make.
+앞서 제가 *A Philosophy of Software Design*을 꼼꼼히 읽었다고 말씀드렸듯이,  
+저는 그 책에 담긴 통찰력에 전적으로 동의합니다.  
+그래서 당신이 TDD에 대해 매우 짧고, 경멸적이며, 부정확하게  
+기술한 부분을 보고 놀랐습니다.  
+저는 TDD를 다음의 세 가지 법칙으로 설명합니다.
 
-So I was surprised to find, on page 157, that you wrote a very short, dismissive, pejorative, and inaccurate section on _Test Driven Development_.  Sorry for all the adjectives, but I think that's a fair characterization.  So my goal, here, is to correct the misconceptions that led you to write the following:
+1.  실패하는 단위 테스트가 존재하지 않는 한, 어떠한 프로덕션 코드도 작성할 수 없다.
+2.  컴파일에 실패할 정도로 최소한의 단위 테스트만 작성해야 한다.
+3.  현재 실패 중인 테스트를 통과시키기 위해 필요한 프로덕션 코드만 작성할 수 있다.
 
->"Test-driven development is an approach to software development where programmers write unit tests before they write code.  When creating a new class, the developer first writes unit tests for the class, based on its expected behavior.  None of these tests pass, since there is no code for the class.  Then the developer works through the tests one at a time, writing enough code for that test to pass.  When all of the tests pass, the class is finished."
+이 세 가지 법칙이 몇 초마다 반복되는 사이클로  
+개발자를 고정시킨다는 것을 생각해 보십시오.  
+테스트가 실패하도록 한 두 줄의 코드를 작성하고,  
+그 테스트를 통과시키기 위해 한두 줄의 프로덕션 코드를 작성하고,  
+몇 초마다 이 과정을 반복합니다.
 
-This is just wrong.  TDD is quite considerably different from what you describe.  I describe it using three laws.
-
- 1. You are not allowed to write any production code until you have first written a unit test that fails because that code does not exist.
-
- 2. You are not allowed to write more of a unit test than is sufficient to fail, and failing to compile is failing.
-
- 3. You are not allowed to write more production code than is sufficient to make the currently failing test pass.
-
-A little thought will convince you that these three laws will lock you into a cycle that is just a few seconds long.  You'll write a line or two of a test that will fail, you'll write a line or two of production code that will pass, around and around every few seconds.
-
-A second layer of TDD is the Red-Green-Refactor loop.  This loop is several minutes long.  It is comprised of a few cycles of the three laws, followed by a period of reflection and refactoring.  During that reflection we pull back from the intimacy of the quick cycle and look at the design of the code we've just written.  Is it clean?  Is it well-structured?  Is there a better approach?  Does it match the design we are pursuing?  If not, should it?
+TDD의 또 다른 단계는 Red-Green-Refactor 루프입니다.  
+이 루프는 몇 분 정도 지속되며,  
+세 가지 법칙의 몇 차례 반복 후,  
+작성한 코드를 돌아보고 리팩토링하는 시간을 갖습니다.  
+이 리팩토링 단계에서는,  
+빠른 사이클의 친밀감에서 벗어나,  
+지금까지 작성된 코드의 디자인을 살펴봅니다.  
+코드가 깔끔한가? 잘 구조화되어 있는가?  
+더 나은 접근 방법은 없는가?  
+만약 그렇지 않다면, 수정해야 하는가?
 
 **JOHN:**
 
-Oops! I plead "guilty as charged" to inaccurately describing TDD.
-I will fix this in the next revision of APOSD. That said, your definition
-of TDD does not change my concerns.
+앗! 제가 TDD를 부정확하게 기술한 점에 대해 “죄를 인정한다”고 말씀드립니다.  
+앞으로 APOSD의 다음 개정판에서 수정할 예정입니다.  
+그렇지만, 당신이 정의한 TDD는 제 우려를 바꾸지 않습니다.
 
-Let's discuss the potential advantages and disadvantages
-of TDD; then readers can decide for themselves whether they think TDD is a
-good idea overall.
+TDD의 잠재적 장점과 단점을 논의해 봅시다;  
+그리고 독자들이 TDD가 전반적으로 좋은지 여부를 스스로 판단할 수 있도록 합시다.
 
-Before we start that discussion, let me clarify the approach I prefer as an
-alternative to TDD. In your online videos you describe the alternative to
-TDD as one where a developer writes the code, gets it fully working
-(presumably with manual tests), then goes back and writes the unit tests.
-You argue that this approach would be terrible: developers
-lose interest once they think code is working, so they wouldn't actually
-write the tests. I agree with you completely. However, this isn't the only
-alternative to TDD.
-
-The approach I prefer is one where the developer works in somewhat
-larger units than in TDD, perhaps a few methods or a class. The developer
-first writes some code (anywhere from a few tens of lines to a few hundred
-lines), then writes unit tests for that code. As with TDD, the
-code isn't considered to be "working" until it has comprehensive unit
-tests.
+우선, 당신이 온라인 비디오에서 설명한  
+“TDD 대신에 코드가 먼저 작성되고(아마 수동 테스트로 동작 확인),  
+그 후 단위 테스트를 작성하는” 접근 방식 외에도  
+또 다른 대안이 있다고 했습니다.  
+저는 이에 전적으로 동의합니다.  
+당신이 선호하는 접근 방식은,  
+개발자가 TDD보다 조금 더 큰 단위(몇 개의 메서드 또는 하나의 클래스)를  
+먼저 작성한 다음, 그 코드에 대해 단위 테스트를 작성하는 것입니다.  
+TDD와 마찬가지로,  
+해당 코드가 포괄적인 단위 테스트를 통과하기 전까지는  
+“작동한다”고 보지 않습니다.
 
 **UB:**
 
-How about if we call this technique "bundling" for purposes of this
-document?  This is the term I use in _Clean Code 2d ed._
+이 기법을 문서상에서 “bundling(묶음)”이라고 부르는 것은 어떻습니까?  
+이 용어는 *Clean Code 2판*에서 제가 사용하는 용어입니다.
 
 **JOHN:**
 
-Fine by me.
+좋습니다.
 
-The reason for working in larger units is to encourage design
-thinking, so that a developer can think about a collection of related
-tasks and do a bit of planning to come up with a good overall design
-where the pieces fit together well.
-Of course the initial design ideas will have flaws and refactoring
-will still be necessary, but the goal is to center the development
-process around design, not tests.
+당신이 큰 단위로 작업하는 이유는,  
+개발자가 관련된 여러 작업을 모아서 전체적인 설계를  
+고려할 수 있도록 하기 위함입니다.  
+물론 초기 설계 아이디어는 결함이 있을 수 있고 리팩토링이 필요하겠지만,  
+핵심은 디자인에 집중하는 것입니다.
 
-To start our discussion, can you make a list of the advantages you
-think that TDD provides over the approach I just described?
+우선, TDD가 당신이 설명한 접근 방식보다  
+어떤 장점을 제공한다고 생각하는지 목록을 만들어 주실 수 있습니까?
 
 **UB:**
 
-The advantages I usually attribute to TDD are:
+제가 TDD의 장점으로 보통 꼽는 것은 다음과 같습니다:
 
-* Very little need for debugging.  After all, if you just saw everything working a minute or two ago, there's not much to debug.
+-   디버깅할 필요가 거의 없습니다.  
+    어차피 1~2분 전에는 모든 것이 제대로 동작했으므로,  
+    디버깅할 일이 많지 않습니다.
 
-* A stream of reliable low level documentation, in the form of very small and isolated unit tests.  Those tests describe the low level structure and operation of every facet of the system.  If you want to know how to do something in the system, there are tests that will show you how.
+-   매우 작은 단위의, 독립적인 단위 테스트가  
+    낮은 수준의 신뢰할 수 있는 문서화 역할을 합니다.  
+    이 테스트들은 시스템의 모든 측면에 대한  
+    구조와 동작을 설명해 줍니다.  
+    만약 시스템에서 무엇인가를 하려면,  
+    해당 테스트들을 보면 방법을 알 수 있습니다.
 
-* A less coupled design which results from the fact that every small part of the system must be designed to be testable, and testability requires decoupling.
+-   모든 작은 부분이 테스트 가능하도록 설계되어,  
+    결과적으로 결합도가 낮은 설계가 유도됩니다.  
+    테스트 가능성이 낮은 설계는 결합되어 있기 마련입니다.
 
-* A suite of tests that you trust with your life, and therefore supports fearless refactoring.
+-   테스트의 신뢰도가 매우 높아져,  
+    두려움 없이 대대적인 리팩토링이 가능해집니다.
 
-However, you asked me which of these advantages TDD might have over _your_ preferred method.  That depends on how big you make those larger units you described.  The important thing to me is to keep the cycle time short, and to prevent entanglements that block testability.
+하지만, 당신이 묶음 방식(번들링)과 비교했을 때,  
+TDD가 어떤 장점을 가지는지 묻는다면,  
+그것은 개발 단위의 크기에 달려 있습니다.  
+저에게 중요한 것은 사이클 시간이 짧고,  
+테스트 가능성을 방해하는 얽힘이 없도록 하는 것입니다.
 
-It seems to me that working in small units, and then immediately writing after the fact tests, can give you all the above advantages, so long as you are very careful to test every aspect of the code you just wrote.  I think a disciplined programmer could effectively work that way.  Indeed, I think such a programmer would produce code that I could not distinguish from code written by another programmer following TDD.
+작은 단위로 작업하고 바로 테스트를 작성하면,  
+위의 모든 장점을 얻을 수 있으며,  
+아무리 엄격한 프로그래머라도,  
+TDD를 따르는 코드와 묶음 방식을 따르는 코드를 구분할 수 없을 것입니다.
 
-Above you suggested that bundling is to encourage design.  I think encouraging design is a very good thing.  My question for you is: Why do you think that TDD does not encourage design?  My own experience is that design comes from strategic thought, which is independent of the tactical behavior of either TDD or Bundling.  Design is taking one step back from the code and envisioning structures that address a larger set of constraints and needs.
+당신은 묶음 방식이 디자인을 장려한다고 했습니다.  
+저는 디자인을 장려하는 것이 매우 중요하다고 생각합니다.  
+제 질문은, 왜 TDD가 디자인을 장려하지 않는다고 보시나요?  
+제 경험에 따르면, 디자인은 전략적인 사고에서 나오며,  
+TDD나 묶음 방식의 전술적인 행동과는 별개입니다.
 
-Once you have that vision in your head it seems to me bundling and TDD will yield similar results.
+일단 머릿속에 그 비전을 가지면,  
+묶음 방식과 TDD는 거의 유사한 결과를 낼 것입니다.
 
 **JOHN:**
 
-First, let me address the four advantages you listed for TDD:
+먼저, TDD의 네 가지 장점에 대해 하나씩 말씀드리겠습니다:
 
-* Very little need for debugging? I think any form of unit testing can
-  reduce debugging work, but not for the reason you
-  suggested. The benefit comes because unit tests expose bugs earlier
-  and in an environment where they are easier to track down. A
-  relatively simple bug to fix in development can be very painful to
-  track down in production. I'm not convinced by your argument that
-  there's less debugging because "you just saw everything working a
-  minute ago": it's easy to make a tiny change that exposes a really
-  gnarly bug that has existed for a long time but hasn't yet been
-  triggered. Hard-to-debug problems arise from the accumulated complexity
-  of the system, not from the size of the code increments.
+-   디버깅할 필요가 거의 없다는 점?  
+    단위 테스트라면 디버깅을 줄일 수 있는 것은 맞지만,  
+    그 이유는 단순히 “방금 모든 것이 제대로 동작했기 때문”이 아니라,  
+    단위 테스트가 버그를 더 빨리, 더 쉽게 찾아내기 때문입니다.  
+    개발 중에 간단하게 고칠 수 있는 버그라도,  
+    프로덕션에서 추적하기는 매우 고통스럽습니다.  
+    저는 “방금 모든 것이 제대로 동작했기 때문에 디버깅이 필요 없다”는  
+    당신의 주장에 설득되지 않습니다.  
+    아주 사소한 변경이 오랫동안 발생하지 않았던  
+    매우 난해한 버그를 일으킬 수 있습니다.  
+    디버깅 문제는 코드 증가량이 아니라,  
+    시스템의 누적된 복잡성에서 기인합니다.
 
-	>**UB:** True.  However, when the cycles are very short then the cause
-	of even the gnarliest of bugs have the best chance of being tracked down.
-	The shorter the cycles, the better the chances.
+    > **UB:**  
+    > 맞습니다. 그러나 사이클이 매우 짧으면,  
+    > 가장 난해한 버그라도 원인을 빨리 찾을 수 있습니다.  
+    > 사이클이 짧을수록 유리합니다.
 
-	>**JOHN:** This is only true up to a point. I think you believe
-	that making units smaller and smaller continues to provide benefits,
-	with almost no limit to how small they can get. I think that there
-	is a point of diminishing returns, where making things even smaller
-	no longer helps and actually starts to hurt. We saw this disagreement
-	over method length, and I think we're seeing it again here.
+    > **JOHN:**  
+    > 이것은 어느 정도까지 유효합니다.  
+    > 더 작은 단위로 계속 쪼개면 오히려 도움이 되지 않고  
+    > 반감 효과가 발생한다고 봅니다.  
+    > 우리는 이미 메서드 길이에 대해 의견 차이를 보았고,  
+    > 여기서도 비슷한 논쟁이 벌어지고 있습니다.
 
-* Low level documentation? I disagree: unit tests are a poor form
-  of documentation. Comments are a much more
-  effective form of documentation, and you can put them right next to the
-  relevant code. Trying to learn a method's
-  interface by reading a bunch of unit tests seems much more difficult
-  than just reading a couple of sentences of English text.
+-   낮은 수준의 문서화?  
+    저는 단위 테스트가 문서화로서 효과적이지 않다고 봅니다.  
+    주석은 관련 코드 옆에 바로 붙어 있기 때문에  
+    훨씬 효과적인 문서화 수단입니다.  
+    여러 개의 단위 테스트를 읽어 메서드의 인터페이스를  
+    이해하려는 것보다는,  
+    몇 문장의 영어 설명을 읽는 것이 훨씬 쉽습니다.
 
-	>**UB:** Nowadays it's very easy to find the tests for
-	a function by using the "where-used" feature of the IDE.  As for comments
-	being better, if that were true then no one would publish example code.
+    > **UB:**  
+    > 요즘 IDE의 “사용 위치 찾기” 기능 덕분에,  
+    > 함수의 테스트를 쉽게 찾을 수 있습니다.  
+    > 주석이 더 낫다면,  
+    > 누군가 예제 코드를 발표하지 않겠죠.
 
-* A less coupled design? Possibly, but I haven't experienced this myself.
-  It's not clear to me that designing for testability will produce the
-  best design.
+-   결합도가 낮은 설계?  
+    아마도 그렇지만, 제 경험상 그렇게 느껴지지는 않습니다.  
+    테스트 가능성을 위해 설계하는 것이 항상  
+    최상의 설계를 낳는다고 보기는 어렵습니다.
 
-	>**UB:** Generally the decoupling arises because the test requires a mock
-	of some kind.  Mocks tend to force abstractions that might otherwise not exist.
+    > **UB:**  
+    > 일반적으로 결합도 낮은 설계는, 테스트를 위해 목(mock)을 사용하게 되어  
+    > 추상화가 강제되는 결과를 낳습니다.
 
-	>**JOHN:** In my experience, mocking virtually never changes interfaces;
-	it just provides replacements for existing (typically immovable)
-	interfaces.
+    > **JOHN:**  
+    > 제 경험에 따르면, 목(mock)은 인터페이스를 거의 변경시키지 않습니다;  
+    > 기존 인터페이스에 대해 대체물을 제공할 뿐입니다.
 
-	>**UB:** Our experiences differ.
+    > **UB:**  
+    > 우리의 경험은 다릅니다.
 
-* Enabling fearless refactoring? BINGO! This is the where almost all of the
-  benefits from unit testing come from, and it is a really, really big deal.
+-   두려움 없이 리팩토링할 수 있다는 점?  
+    정답입니다! 이것은 단위 테스트가 주는 거의 모든 이점의 핵심이며,  
+    정말로 큰 장점입니다.
 
-	>**UB:** Agreed.
+    > **UB:**  
+    > 동의합니다.
 
-I agree with your conclusion that TDD and bundling are about the
-same in terms of providing these benefits.
+저는 TDD와 묶음 방식이 동일한 결과를 낼 것이라고 생각합니다.
 
-Now let me explain why I think TDD is likely to result in bad designs.
-The fundamental problem with TDD is that it forces developers to work
-too tactically, in
-units of development that are too small; it discourages design
-thinking.  With TDD the basic unit of
-development is one test: first the test is written, then the code to
-make that test pass. However, the natural units for design are larger
-than this: a class or method, for example. These units
-correspond to multiple test cases. If a developer thinks only about
-the next test, they are only considering part of a design problem at
-any given time. It's hard to design something well if you don't think
-about the whole design problem at once. TDD explicitly
-prohibits developers from writing more code than is needed to pass
-the current test; this discourages the kind of strategic thinking needed
-for good design.
+이제, 왜 TDD가 나쁜 설계를 낳을 가능성이 있는지 설명하겠습니다.  
+TDD의 근본적인 문제는,  
+개발자들을 너무 전술적인 단위(즉, 하나의 테스트 단위)로  
+작업하도록 강제한다는 것입니다.  
+즉, 먼저 테스트를 작성한 후 그 테스트를 통과시키기 위해  
+필요한 코드만 작성하게 됩니다.  
+그러나 설계의 자연스러운 단위는 메서드나 클래스와 같이  
+여러 테스트 케이스에 해당하는 크기입니다.  
+개발자가 매 순간 다음 테스트에만 집중하면,  
+전체 설계 문제의 일부만 고려하게 됩니다.  
+좋은 설계를 위해서는 전체 문제를 한 번에 생각해야 합니다.  
+TDD는 명시적으로 현재 실패 중인 테스트를 통과시키기 위해  
+필요한 코드만 작성하도록 강제함으로써,  
+전략적인 사고를 억제합니다.
 
-TDD does not provide adequate guidance to encourage design. You mentioned
-the Red-Green-Refactor loop, which recommends refactoring after each step,
-but there's almost no guidance for refactoring. How should developers
-decide when and what to refactor? This seems to be left purely to their
-own judgment. For example, if I am writing a method that requires
-multiple iterations of the TDD loop, should I refactor after every iteration
-(which sounds pretty tedious) or wait until after several iterations so that
-I can look at a bigger chunk of code when refactoring and hence be more
-strategic? Without guidance, it will be tempting for developers to keep
-putting off refactoring.
+TDD는 또한 언제, 무엇을 리팩토링할지에 대해  
+충분한 가이드를 제공하지 않습니다.  
+예를 들어, 여러 TDD 사이클을 거쳐 메서드를 작성할 때,  
+매 반복 후에 리팩토링을 해야 하는지, 아니면  
+여러 반복 후에 한꺼번에 리팩토링을 해야 하는지 결정하기 어렵습니다.  
+리팩토링 시점을 전적으로 자신의 판단에 맡기는 것은  
+개발자가 리팩토링을 미루게 만드는 유혹을 불러일으킵니다.
 
-TDD is similar to the One Thing Rule we discussed earlier in that it is
-biased: it provides very strong and clear instructions pushing developers
-in one direction (in this case, acting tactically) with only vague
-guidance in the other direction (designing more strategically). As a result,
-developers are likely to err on the side of being too tactical.
+TDD는 “한 가지 일” 규칙과 유사하게,  
+매우 강한 지침을 주면서도 반대 방향의 명확한 가이드는  
+거의 제공하지 않습니다.  
+그 결과, 개발자들은 전술적인 방향으로  
+너무 치우치게 됩니다.
 
-TDD guarantees that developers will initially write bad code. If you start
-writing code without thinking about the whole design problem, the first code
-you write will almost certainly be wrong. Design only
-happens after a bunch of bad code has accumulated.
-I watched your video on TDD, and
-you repeatedly wrote the wrong code, then fixed it later. If the developer
-refactors conscientiously (as you did) they can still end up with good
-code, but this works against human nature. With TDD, that bad code will
-actually work (there are tests to prove it!) and it's human nature not
-to want to change something that
-works. If the code I'm developing is nontrivial, I will probably have to
-accumulate a lot of bad code with TDD before I have enough code in front
-of me to understand what the design should have been.
-It will be very difficult for me to force myself to throw away
-all that work.
+TDD는 개발자들이 처음에는 잘못된 코드를 작성하게 만듭니다.  
+코드를 작성할 때 전체 설계 문제를 고려하지 않으면,  
+첫 번째 작성된 코드는 거의 틀리게 마련입니다.  
+리팩토링을 성실히 한다면 결국 좋은 코드로 만들 수 있겠지만,  
+인간의 본성 상, 이미 동작하는 코드를 바꾸고 싶어하지 않습니다.  
+만약 코드가 복잡하다면, TDD 방식에서는  
+많은 잘못된 코드가 누적된 후에야  
+설계가 무엇이어야 하는지 이해할 수 있게 됩니다.  
+그리고 그런 코드를 과감하게 버리기란 매우 어려울 것입니다.
 
-It's easy for a developer to believe they are doing TDD correctly while
-working entirely tactically, layering on hack after hack with an
-occasional minor refactor, without ever thinking about the overall design.
-
-I believe that the bundling approach is superior to TDD because it focuses
-the development process around design: design first, then code, then write
-unit tests. Of course, refactoring will still be
-required: it's almost never possible to get the design right the first time.
-But starting with design will reduce the amount of bad code you write and
-get you to a good design sooner. It is possible to produce equally good
-designs with TDD; it's just harder and requires a lot more discipline.
+저는 TDD 대신 묶음 방식이 더 나은 설계를 낳는다고 생각합니다.  
+왜냐하면 묶음 방식은 본질적으로 설계에 더 집중하게 만들기 때문입니다:  
+먼저 디자인을 하고, 그 후에 코드를 작성하고,  
+마지막에 단위 테스트를 작성하는 것입니다.  
+물론, 리팩토링은 여전히 필요합니다만,  
+좋은 설계를 먼저 한다면,  
+TDD 방식에서 발생하는 많은 잘못된 코드를 줄일 수 있습니다.  
+물론, TDD로도 좋은 설계를 얻을 수 있지만,  
+그것은 훨씬 더 많은 규율과 노력을 요구합니다.
 
 **UB:**
 
-I'll address your points one at a time.
+제가 TDD가 너무 전술적이어서 설계를 억제한다고 생각하지는 않습니다.  
+모든 프로그래머는, 테스트 방식에 상관없이,  
+한 줄씩 코드를 작성하는 전술적 행동을 합니다.  
+그것이 매우 전술적이라고 해서 설계를 억제한다고 보진 않습니다.
 
-* I haven't found that the scale of TDD is so tactical that it discourages thinking.  Every programmer, regardless of their testing discipline, writes code one line at a time.  That's immensely tactical and yet does not discourage design.  So why would one test at a time discourage it?
+또한 TDD에 관한 문헌들은 리팩토링을 늦추지 말 것을 강하게 권장합니다.  
+디자인에 대해 미리 생각하는 것도 매우 중요합니다.  
+둘 다 이 규율의 중요한 부분입니다.
 
-* The literature on TDD strongly discourages delaying refactoring.  While thinking about design is strongly encouraged.  Both are integral parts of the discipline.
+우리 모두 처음에는 잘못된 코드를 작성합니다.  
+TDD의 규율은 그 잘못된 코드를 지속적으로 정리할 기회를 제공합니다.  
+리팩토링이라는 규율은 잘못된 설계를 한 단계씩 더 나은 설계로  
+변경할 수 있게 해줍니다.
 
-* We all write bad code at the start.  The discipline of TDD gives us the opportunity, and the safety, to continuously clean it.  Design insights arise from those kinds of cleaning activities.  The discipline of refactoring allows bad designs to be transformed, one step at a time, into better designs.
-
-* It's not clear to me why the act of writing tests late is a better design choice.  There's nothing in TDD that prevents me from thinking through a design long before I write the very first tested code.
+테스트를 나중에 작성하는 것이 왜 더 나은 설계 선택인지,  
+그것이 반드시 TDD보다 우월하다고 주장할 수는 없습니다.  
+TDD 자체가 처음부터 코드를 너무 작게 작성하도록 강제하지만,  
+그로 인해 얻는 인사이트도 있습니다.
 
 **JOHN:**
 
-You say there is nothing about TDD that stops developers from thinking ahead
-about design. This is only partly true. Under TDD I can think ahead, but I
-can't actually write my ideas down in the form of code, since that would
-violate TDD Rule 1. This is a significant discouragement.
+저는 TDD가 너무 전술적이라는 것이  
+더 작은 단위로 작업하는 것이 계속해서 이점을 준다고 보지 않습니다.  
+언제까지 작게 쪼갤 수 있는지에는 한계가 있습니다.  
+이 문제는 메서드 길이 문제에서 이미 보았던 의견 차이와 같습니다.
 
-You claim that "thinking about design is strongly encouraged" in TDD,
-but I haven't seen this in your discussions of TDD. I watched your
-video example of using TDD
-for computing bowling scores, and design is never even mentioned after the
-first minute or two (ironically, one of the conclusions of this
-example is that the brief initial design turned out to be
-useless). There is no suggestion of thinking ahead in the video;
-it's all about cleaning up messes after the fact.
-In all of the TDD materials you have shown me, I have not seen any
-warnings about the dangers of becoming so tactical with TDD that
-design never occurs (perhaps you don't even view this as a serious risk?).
+-   낮은 디버깅 필요성:  
+    저는 단위 테스트가 디버깅을 줄일 수 있다고 보지만,  
+    그 이유는 버그를 더 빨리, 더 쉽게 찾아내기 때문이라고 생각합니다.  
+    “방금 모든 것이 제대로 동작했기 때문에 디버깅할 필요 없다”는 주장에는  
+    동의하기 어렵습니다.
+
+    > **UB:**  
+    > 맞습니다. 하지만 사이클이 매우 짧으면,  
+    > 가장 난해한 버그라도 원인을 빨리 찾을 수 있습니다.
+
+    > **JOHN:**  
+    > 이것은 어느 정도까지만 유효합니다.  
+    > 매우 작은 단위로 계속 분할하는 것은 오히려 도움이 되지 않고,  
+    > 실제로는 손해를 볼 수 있습니다.
+
+-   낮은 수준의 문서화:  
+    저는 단위 테스트가 문서화로서는 효과적이지 않다고 생각합니다.  
+    주석은 관련 코드 바로 옆에 위치해 있어,  
+    몇 문장만 읽어도 충분히 이해할 수 있습니다.  
+    단위 테스트를 모두 읽어 인터페이스를 파악하는 것보다는  
+    간단한 영어 문장이 낫습니다.
+
+    > **UB:**  
+    > 요즘 IDE에서는 “사용 위치 찾기” 기능 덕분에,  
+    > 함수의 테스트를 쉽게 찾을 수 있습니다.  
+    > 그리고 주석이 더 낫다면,  
+    > 누군가는 예제 코드를 발표하지 않겠죠.
+
+-   결합도가 낮은 설계:  
+    아마도 그렇지만, 제 경험상 그렇게 느껴지지는 않습니다.  
+    테스트 가능성을 위해 설계하는 것이 항상 최상의 설계를 보장하지는 않습니다.
+
+    > **UB:**  
+    > 일반적으로, 목(mock)을 사용해야 하는 상황에서,  
+    > 테스트 가능성이 강제되어 결과적으로 결합도가 낮아집니다.
+
+    > **JOHN:**  
+    > 제 경험으로는, 목은 인터페이스를 거의 변경시키지 않습니다;  
+    > 그저 기존 인터페이스의 대체물을 제공할 뿐입니다.
+
+    > **UB:**  
+    > 우리의 경험은 다릅니다.
+
+-   두려움 없는 리팩토링:  
+    바로 이 점이 단위 테스트의 가장 큰 장점입니다.  
+    이것이 바로 모든 이점의 핵심이며, 정말 중요한 부분입니다.
+
+    > **UB:**  
+    > 동의합니다.
+
+저는 TDD와 묶음 방식의 결과가 매우 유사할 것이라고 생각합니다.
+
+이제, 왜 TDD가 전술적인 작업에 치우쳐  
+좋은 설계를 저해할 수 있는지 설명하겠습니다.  
+TDD의 근본적인 문제는,  
+개발자들이 한 테스트에만 집중하도록 강제함으로써,  
+전체 설계 문제를 놓치게 만든다는 것입니다.  
+TDD에서는 단위의 기본 크기가 하나의 테스트이고,  
+먼저 테스트를 작성한 후 해당 테스트를 통과시키기 위해  
+필요한 코드만 작성합니다.  
+그러나 좋은 설계의 단위는 보통 하나의 메서드나 클래스처럼  
+여러 테스트 케이스에 해당하는 크기입니다.  
+만약 개발자가 오직 다음 테스트만 생각한다면,  
+전체 설계 문제의 일부분만 고려하게 됩니다.  
+즉, TDD는 현재 실패 중인 테스트만 통과시키도록  
+코드를 제한함으로써, 전략적 사고를 방해합니다.
+
+또한 TDD는 언제, 무엇을 리팩토링할지에 대한 명확한 가이드라인을  
+제공하지 않습니다.  
+예를 들어, 하나의 메서드에 대해 여러 번의 TDD 사이클이 진행될 때,  
+매번 리팩토링을 해야 하는지, 아니면 여러 번의 사이클 후에  
+한꺼번에 리팩토링을 해야 하는지 결정하기 어렵습니다.  
+리팩토링에 대한 명확한 지침이 없다면,  
+개발자는 리팩토링을 계속 미루게 될 것입니다.
+
+TDD는 “한 가지 일” 규칙과 유사하게,  
+매우 강한 지침(현재 실패하는 테스트만 통과시키도록 강제)을 주면서도,  
+반대 방향(전체적인 설계에 대한 전략적 사고)에 대해서는  
+애매한 가이드만 제공합니다.  
+결과적으로, 개발자들은 전술적인 작업에 치우치게 됩니다.
+
+TDD는 개발자가 처음에는 잘못된 코드를 작성하게 만듭니다.  
+만약 전체 설계 문제를 충분히 고려하지 않고 코드를 작성하면,  
+첫 번째 작성된 코드는 거의 틀리게 마련입니다.  
+리팩토링을 성실히 수행한다면 결국 좋은 코드로 만들 수 있지만,  
+이미 “작동한다”는 사실에 안주하게 되어  
+기존의 잘못된 코드를 버리기 어렵게 됩니다.  
+특히 복잡한 코드를 작성할 경우,  
+TDD 방식은 많은 잘못된 코드를 쌓아두게 만들고,  
+그 누적된 코드가 결국 설계를 왜곡시킵니다.
+
+저는 묶음 방식이 TDD보다 더 나은 설계를 가져온다고 생각합니다.  
+왜냐하면 묶음 방식은 설계에 집중할 수 있도록  
+먼저 전체 디자인을 구상하고, 그 후에 코드를 작성하며,  
+마지막에 단위 테스트를 추가하기 때문입니다.  
+물론, 리팩토링은 항상 필요합니다.  
+하지만 초기 설계에 집중하면,  
+TDD 방식에서 발생하는 많은 잘못된 코드를 줄일 수 있습니다.  
+최상의 결과에 관해서라면 두 방식은 비슷하겠지만,  
+평균적 혹은 최악의 경우에 있어서는 TDD가 더 나쁜 결과를 낼 수 있다고 저는 생각합니다.
 
 **UB:**
 
-I usually use an abbreviated form of UML to capture my early design decisions.  I have no objection to capturing them in pseudocode, or even real code.  However, I would not commit any such pre-written code.  I would likely hold it in a text file, and consult it while following the TDD cycle.  I might feel safe enough to copy and paste from the text file into my IDE in order to make a failing test pass.
+제가 TDD가 전술적인 것 때문에 설계를 억제한다고 생각하지는 않습니다.  
+모든 프로그래머는 테스트 방식에 관계없이 한 줄씩 코드를 작성합니다.  
+그것이 전술적이라고 해서 설계가 억제된다고 보기는 어렵습니다.  
+또한 TDD 문헌에서는 리팩토링을 늦추지 말고,  
+디자인에 대해 미리 생각하라고 강력히 권장합니다.  
+두 가지 모두 TDD의 중요한 부분입니다.
 
-The Bowling game is an example of how wildly our initial design decisions can  deviate from our eventual solutions.  It's true that introductory videos often do not expose the depth of a discipline.
+우리 모두 처음에는 잘못된 코드를 작성합니다.  
+TDD의 규율은 그 잘못된 코드를 안전하게 정리할 기회를 제공합니다.  
+리팩토링을 통해 잘못된 설계를 더 나은 설계로 한 단계씩 전환할 수 있습니다.
+
+TDD 대신 테스트를 늦게 작성하는 것이 왜 더 나은 설계 선택인지,  
+이것이 반드시 TDD보다 우월하다고 주장할 수는 없지만,  
+테스트를 늦게 작성하는 것은, 본질적으로 먼저 설계에 집중할 수 있게 해주기 때문입니다.  
+테스트는 여전히 비교적 빨리 작성되지만,  
+TDD 방식에서는 테스트가 코드보다 먼저 작성되어야 한다는 제약이 있기에,  
+설계에 대한 깊은 고민을 미루게 되는 문제가 있습니다.
 
 **JOHN:**
 
-As I was watching your TDD video for the second time, you said something
-that jumped out at me:
-  >Humans consider things that come first to be important and things that
-   come at the end to be less important and somehow optional; that's
-   why they are at the end, so we can leave them out if we have to.
+TDD가 개발자들에게 지나치게 전술적인 사고에 빠지도록  
+강제하는 이유는 무엇입니까?  
+왜 TDD는 개발자들이 현재의 실패한 테스트만을  
+통과시키기 위한 코드만 작성하도록 금지합니까?  
+어떻게 이러한 제한이 시스템을 더 낫게 만드는 것일까요?
 
-This captures perfectly my concern about TDD. TDD insists that tests must
-come first, and design, if it happens at all, comes at the end, after
-code is working. I believe that good design is the most important
-thing, so it must be the top priority. I don't consider tests optional,
-but delaying them is safer than delaying design. Writing tests isn't particularly
-difficult; the most important thing is having the discipline to do it.
-Getting a good design is really hard, even if you are very disciplined;
-that's why it needs to be the center of attention.
+> **UB:**  
+> 이 규율의 목적은 모든 것이 테스트되도록 보장하는 것입니다.  
+> 아주 적은 코드만으로 테스트가 실패하도록 한 후,  
+> 그 테스트를 통과시키기 위해 필요한 코드만을 작성합니다.  
+> 또한, 이렇게 짧은 사이클을 유지하면,  
+> 코드가 어떻게 작동하는지에 대한 인사이트를 얻을 수 있습니다.  
+> 이러한 인사이트는 종종 더 나은 설계 결정을 이끌어냅니다.
+
+> **JOHN:**  
+> 부분적으로 동의합니다.  
+> 하지만 제가 보기에는,  
+> 코드가 부분적으로 작동하는 것을 보는 인사이트는,  
+> 개발자들이 TDD 규율에 얽매이지 않고도 얻을 수 있습니다.
+
+두 번째 질문으로,  
+TDD가 묶음 방식보다 더 나은 설계를 가져온다고 생각하십니까?  
+만약 그렇다면, 그 이유를 설명해 주시겠습니까?
+
+> **UB:**  
+> 제 생각에는, 묶음 방식에 능숙한 개발자와 TDD에 능숙한 개발자가  
+> 작성한 설계는 매우 유사할 것이며, 단위 테스트 커버리지 역시 비슷할 것입니다.  
+> 또한, TDD를 따르는 개발자가,  
+> 단위 테스트를 통해 문제를 더 빨리 발견하고 수정하므로,  
+> 어느 정도 더 생산적일 것이라고 추측합니다.
+
+> **JOHN:**  
+> 저는 묶음 방식이 더 나은 설계를 가져온다고 생각합니다.  
+> 왜냐하면 그것은 실제로 디자인 자체에 집중하기 때문입니다.  
+> 즉, “무엇을” 해야 하는지가 아니라 “어떻게” 해야 하는지에  
+> 집중함으로써 더 나은 디자인으로 이어진다고 봅니다.  
+> 저는 최상의 결과에 관해서는 두 방식이 비슷하겠지만,  
+> 평균적 혹은 최악의 경우에는 TDD가 훨씬 나쁜 결과를 낼 것이라고 생각합니다.
+
+**JOHN (TDD 요약):**
+
+여기 TDD에 대한 우리의 논의를 요약해 보겠습니다:
+
+-   우리는 단위 테스트가 소프트웨어 개발에 필수적이라는 점에 동의합니다.  
+    단위 테스트는 개발자들이 시스템을 대대적으로 변경해도  
+    문제가 발생하지 않도록 도와줍니다.
+
+-   TDD를 사용하여 좋은 설계를 가진 시스템을 만들 수 있다는 점에도 동의합니다.
+
+-   저는 TDD가 지나치게 전술적이어서 좋은 설계를 저해할 수 있다고 봅니다.  
+    당신은 TDD가 좋은 설계를 저해하지 않으며,  
+    오히려 묶음 방식과 거의 동일하거나 약간 더 나은 결과를 낼 수 있다고 봅니다.
+
+-   저는 TDD보다 “묶음(bundling)” 방식이  
+    단위 테스트 스위트를 만드는 데 더 나은 접근이라고 생각합니다.  
+    당신은 묶음 방식이 TDD만큼 좋은 결과를 낼 수 있으나,  
+    테스트 커버리지는 다소 낮을 수 있다고 봅니다.
+
+-   저는 TDD와 묶음 방식 모두 최상의 결과에서는 비슷하겠지만,  
+    평균적 또는 최악의 경우에는 TDD가 훨씬 더 나쁜 결과를 가져올 것이라고  
+    주장합니다.  
+    당신은 오히려 TDD가 약간 더 나은 결과를 낼 수 있다고 생각합니다.  
+    또한 선택은 선호도와 성격에 크게 의존한다고 봅니다.
 
 **UB:**
 
-TDD is a coding discipline.  Of course design comes before coding -- I don't know anyone who thinks otherwise.  Even the Bowling Game video made that point. But, as we saw in the Bowling Game video, sometimes the code will take you in a very different direction.
+이 요약은 우리의 논의를 공정하게 정리한 것 같습니다.  
+우리는 코드가 테스트로 잘 덮여 있어야 한다는 점에서는 동의하지만,  
+어떤 규율을 더 선호하는지에 대해 의견이 엇갈립니다.  
+저는 아주 짧은 사이클로 테스트를 먼저 작성하는 규율을  
+선호하는 반면, 당신은 비교적 큰 묶음의 코드를 먼저 작성하고  
+나중에 테스트를 추가하는 방식을 선호합니다.  
+우리는 이 두 규율의 위험과 보상에 대해 의견이 다릅니다.
 
-That difference doesn't imply that the design shouldn't have been done.  It just implies that designs are speculative and may not always survive reality.
+---
 
-As Eisenhower once said:
->“In preparing for battle I have always found that plans are useless, but planning is indispensable.”
+## 마무리 발언
 
 **JOHN:**
 
-You ask why writing tests later is a better design choice. It isn't.
-The benefit of the bundled approach doesn't come from writing tests later;
-it comes from doing design sooner. Writing tests (a bit) later is a
-consequence of this choice. The tests are still written pretty early-on
-with the bundled approach, so I don't think the delay causes significant
-problems.
+먼저, *Clean Code*의 주요 아이디어들에 대해  
+저의 여러 주장을 들어주셔서 감사합니다.  
+이 토론이 독자들에게 많은 생각할 거리를 제공하기를 바랍니다.
+
+우리는 이 토론에서 많은 주제와 하위 주제를 다루었지만,  
+제 생각에는 대부분의 우려가 두 가지 일반적인 오류에서 비롯된다고 봅니다:  
+중요한 것에 집중하지 않는 것, 그리고 디자인의 균형을 맞추지 못하는 것입니다.
+
+소프트웨어 디자인(그리고 아마 다른 디자인 분야에서도)에서는,  
+정말 중요한 것이 무엇인지를 식별하고,  
+그것에 집중하는 것이 필수적입니다.  
+만약 중요하지 않은 것에 집중하면,  
+진짜 중요한 성과를 이루기 어렵습니다.  
+불행하게도, *Clean Code*는  
+다음과 같은 것들에 지나치게 집중합니다:
+
+-   10줄짜리 메서드를 5줄짜리 메서드로,  
+    5줄짜리 메서드를 2~3줄짜리 메서드로 나누는 것.
+-   영어로 작성된 주석 사용을 제거하는 것.
+-   테스트보다 코드를 먼저 작성하고,  
+    기본 개발 단위를 테스트가 아니라 추상화로 만드는 것.
+
+이러한 것들은 모두 큰 가치를 제공하지 않으며,  
+최상의 디자인을 만드는 데서 벗어나게 합니다.
+
+반대로, *Clean Code*는 주석의 가치를  
+근본적으로 과소평가합니다.  
+주석이 없으면 인터페이스에 대한 명세가 불완전해지고,  
+이는 혼란과 버그로 이어집니다.  
+구현 주석이 없으면, 독자들은  
+작성자의 의도와 지식을 매번 재구성해야 하며,  
+이는 시간 낭비와 버그로 이어집니다.
+
+제 초기 발언에서, 시스템은 중요한 정보가  
+개발자들에게 명확하게 전달되지 않을 때 복잡해진다고 했습니다.  
+주석을 쓰지 않으면,  
+당신과 같이 다른 사람들이 알아야 할 중요한 정보가 숨겨지게 됩니다.
+
+두 번째 일반적 오류는 균형 문제입니다.  
+디자인은 상충하는 여러 요소 사이의 균형입니다.  
+거의 모든 디자인 아이디어는 극단으로 치우치면  
+나쁜 결과를 낳습니다.  
+하지만 *Clean Code*는 한쪽 방향으로  
+너무 강한 조언을 주면서,  
+반대 방향에 대해서는 아무런 명확한 지침을 제공하지 않습니다.  
+예를 들어, 메서드를 짧게 만드는 것은 종종 좋은 일이지만,  
+*Clean Code*의 입장은 너무 일방적이어서  
+독자들이 지나치게 코드를 쪼개게 만듭니다.  
+우리는 `PrimeGenerator` 예제에서,  
+이로 인해 거의 이해할 수 없게 된 코드를 보았습니다.  
+마찬가지로, TDD에 관한 *Clean Code*의 입장도  
+한쪽으로 치우쳐 있어,  
+디자인을 완전히 압축해 버릴 위험이 있습니다.
 
 **UB:**
 
-I think we simply disagree that TDD discourages design.  The practice of TDD does not discourage me from design; because I value design.  I would suggest that those who do not value design will not design, no matter what discipline they practice.
+John, 이번 프로젝트에 참여해 주셔서 감사합니다.  
+이 토론은 저에게도 정말 즐거운 경험이었습니다.  
+저는 똑똑한 사람들과 의견을 나누고 토론하는 것을 사랑합니다.  
+그리고 우리가 생각하는 가치들이 사실은 매우 많이 일치한다는 것도  
+알게 되었습니다.
 
-**JOHN:**
+저는 당신이 제시한 좋은 아이디어들을 충분히 고려하였으며,  
+당신과 이 전체 문서를 제2판 *Clean Code*에 통합했습니다.
 
-You claim that the problems I worry about with TDD simply don't happen in
-practice. Unfortunately I have heard contrary claims from senior
-developers that I trust. They complain about horrible code produced by
-TDD-based teams, and they believe that the problems were caused by TDD.
-Of course horrible code can be produced with any design approach.
-And maybe those teams didn't implement TDD properly, or maybe those
-cases were outliers.
-But the problems reported to me line up exactly with what I would
-expect to happen, given the tactical nature of TDD.
+다시 한 번 감사드리며,  
+제 학생들에게도 당신의 안부를 전해 주시길 바랍니다.
 
-**UB:**
-
-My experience differs. I've worked on many projects where TDD has been used
-effectively and profitably.  I'm sure the senior developers that you trust are telling you the truth about their experience.  Having never seen TDD lead to such bad outcomes myself, I sincerely doubt that the blame can be traced to TDD.
-
-**JOHN:**
-
-You ask me to trust your extensive experience with
-TDD, and I admit that I have no personal experience with TDD.
-On the other hand, I have a lot of experience with tactical programming,
-and I know that it rarely ends well.
-TDD is one of the most extreme forms of tactical programming I've
-encountered.
-In general, if "making it work" is the #1 priority, instead of
-"develop a clean design", code turns to spaghetti.
-I don't see enough safeguards in your approach to TDD
-to prevent the disaster scenarios; I don't even see a clear
-recognition of the risk.
-
-Overall, TDD is in a bad place on the risk-reward spectrum. In comparison
-to the bundling approach, the downside risks for poor code quality in TDD
-are huge, and I don't see enough upside reward (if any) to compensate.
-
-**UB:**
-
-All I can say to that is that your opinion is based on a number of false impressions and speculations, and not upon direct experience.
-
-**JOHN:**
-
-Now let me ask you a couple of questions.
-
-First, at a microscopic level, why on earth does TDD prohibit developers
-from writing more code than needed to pass the current test? How does
-enforcing myopia make systems better?
-
->**UB:**
-The goal of the discipline is to make sure that everything is tested.
-One good way to do that is to refuse to write any code unless it is to make a failing test pass.  Also, working in such short cycles provides insights into
-the way the code is working.  Those insights often lead to better design decisions.
-
->**JOHN:**
-I agree that seeing code (partially) working can provide insights. But
-surely that benefit can be had without such a severe restriction on
-how developers think?
-
-Second, at a broader level, do you think TDD is likely to produce better
-designs than approaches that are more design-centric, such as the bundling
-approach I described? If so, can you explain why?
-
->**UB:**
-My guess is that someone adept at bundling, and someone adept at TDD would produce very similar designs, with very similar test coverage.  I would also venture to guess that the TDDer would be somewhat more productive than the bundler if for no reason other than that the TDDer finds and fixes problems earlier than the bundler.
-
->**JOHN:**
-I think that the bundling approach will result in a better design because
-it actually focuses on design, rather than focusing on tests and hoping
-that a good design will magically emerge. I think it's really hard to argue
-that the best way to achieve one thing is to focus your attention on
-something else. And the bundling approach will
-make progress faster because the early thinking about design will reduce the
-amount of bad code you end up having to throw away under TDD. Overall, I'd
-argue that the best-case outcomes for the two approaches will
-be about the same, but average and (especially) worst-case outcomes will
-be far worse for TDD.
-
-**JOHN:**
-
-I don't think we're going to resolve our disagreements on TDD.
-To do that, we'd need empirical data about the frequency of good and bad
-outcomes from TDD. Unfortunately I'm not aware of any such data.
-Thus, readers will have to decide for themselves whether the potential
-benefits of TDD outweigh the risks.
-
-For anyone who chooses to use TDD, I urge you to do so with extreme
-caution. Your primary goal must not be just working code, but rather a
-clean design that will allow you to develop quickly in the future.
-TDD will not lead you naturally to the best design, so you will need
-to do significant and continuous refactoring to avoid spaghetti code.
-Ask yourself repeatedly "suppose that I knew everything I know now when
-I first started on this project; would I have chosen the current
-structure for the code?" When the answer is no (which will happen
-frequently) stop and refactor. Recognize that TDD will cause you to
-write more bad code than you may be used to, so
-you must be prepared to throw out and rewrite more than you are used to.
-Take time to plan ahead and think about the overall design, rather than
-just making the next test work.
-If you do all of these things diligently, I think it is possible to
-mitigate the risks of TDD and produce well-designed code.
-
-**UB:**
-
-Let's just say that I agree with all that advice, but disagree with your assertion that TDD might be the cause of bad code.
-
-### TDD Summary
-
-**JOHN:**
-
-Here is my attempt to summarize our thoughts on Test-Driven Development:
-
-* We agree that unit tests are an essential element in software development.
-They allow developers to make significant changes to a system without fear
-of breaking something.
-
-* We agree that it is possible to use TDD to produce systems with good designs.
-
-* I believe that TDD discourages good design and can easily lead to very bad
-code. You do not believe that TDD discourages good
-design and don't see much of a risk of bad code.
-
-* I believe that there are better approaches than TDD for producing good
-unit test suites, such as the "bundling" approach discussed above. You agree
-that bundling can produce outcomes just as good as TDD but think it may lead to
-somewhat less test coverage.
-
-* I believe that TDD and bundling have similar best-case outcomes, but that
-the average and worst-case outcomes will be much worse for TDD. You disagree
-and believe that, if anything, TDD may produce marginally better outcomes
-than bundling. You also think that preference and personality are larger factors in
-making the choice between the two.
-
-**UB:**
-
-This is a fair summary of our discussion.  We seem to disagree over the best application
-of discipline.  I prefer a disciplined approach to keep the code covered by tests
-written first in very short cycles.  You prefer a disciplined approach of writing relatively longer
-bundles of code and then writing tests for those bundles.  We disagree on the risks and rewards of
-these two disciplines.
-
-## Closing Remarks
-
-**JOHN:**
-
-First, I'd like to thank you for tolerating (and responding to) the arguments
-I have made about some of the key ideas in *Clean Code*. I hope this
-discussion will provide food for thought for readers.
-
-We have covered a lot of topics and subtopics in this discussion, but
-I think that most of my concerns result from two general errors made
-by *Clean Code*: failure to focus on what is important, and failure to
-balance design tradeoffs.
-
-In software design (and probably in any design environment) it is essential
-to identify the things that really matter and focus on those. If you
-focus your attention on things that are unimportant you are
-unlikely to achieve the things that really are important.
-Unfortunately, *Clean Code* repeatedly focuses on things that don't really
-matter, such as:
-
-* Dividing ten-line methods into five-line methods and dividing five-line methods
-  into two- or three-line methods.
-* Eliminating the use of comments written in English.
-* Writing tests before code and making the basic unit of development a
-  test rather than an abstraction.
-
-None of these provides significant value, and we have seen how they
-distract from producing the best possible designs.
-
-Conversely, *Clean Code* fundamentally undervalues comments, which are
-essential and irreplaceable. This
-comes at a huge cost. Without interface comments the specifications for
-interfaces are incomplete. This is guaranteed to result in confusion and bugs.
-Without implementation comments, readers are forced to rederive knowledge
-and intentions that were in the mind of the original developer. This wastes
-time and leads to more bugs.
-
-In my opening remarks I said that systems become complex when important
-information is not accessible and obvious to developers. By refusing to
-write comments, you are hiding important information that you have and
-that others need.
-
-The second general error in *Clean Code* has to do with balance. Design
-represents a balance between competing concerns. Almost any design idea
-becomes a bad thing if taken to the extreme. However, *Clean Code*
-repeatedly gives very strong advice in one direction without correspondingly
-strong advice in the other direction or any meaningful guidance about how
-to recognize when you have gone too far. For example, making methods
-shorter is often a good thing, but the *Clean Code* position is so one-sided
-and extreme that readers are likely to chop things up too much. We saw
-in the `PrimeGenerator` example how this resulted in code that was
-nearly incomprehensible. Similarly, the *Clean Code* position on TDD is
-one-sided, failing to
-recognize any possible weakness and encouraging readers to take this to
-a tactical extreme where design is completely squeezed out of the development
-process.
-
-**UB:**
-
-John, I'd like to thank you for participating in this project.  This was a lot of fun for me.  I love disagreement and debate with smart people.  I also think that we share far more values than separate us.
-
-For my part I'll just say that I have given due consideration to the points you've made, and while I disagree with your conclusions above, I have integrated several of your better ideas, as well as this entire document, into the second edition of _Clean Code_.
-
-Thanks again, and give my best to your students.
+---
